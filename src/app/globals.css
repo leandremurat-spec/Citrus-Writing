@@ -1,0 +1,677 @@
+/*
+ * `source("../")` scopes automatic class detection to `src/`. Without it Tailwind scans the
+ * whole project — including CLAUDE.md and other prose — so writing a utility name in
+ * documentation emits a real CSS rule for it. That is how three dead rules got into the
+ * production stylesheet before this was added.
+ */
+@import "tailwindcss" source("../");
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+/* Generated: every colour token, five palettes x light and dark. See the Palette section
+   below, and src/lib/theme/palettes.ts. An @import has to precede every other rule, which
+   is why the statement is up here and the explanation is down there. */
+@import "./palettes.css";
+
+/* `.dark` itself, not only its descendants: a `dark:` utility on <html> must fire too. */
+@custom-variant dark (&:is(.dark, .dark *));
+
+/* ------------------------------------------------------------------ */
+/*  Design tokens → Tailwind utilities                                 */
+/* ------------------------------------------------------------------ */
+@theme inline {
+  /* Figtree carries chrome; Caprasimo is the display face for headings and big numerals.
+     Newsreader is the manuscript default — swappable per device, see --manuscript-font-family
+     below and src/lib/settings/appearance.ts. Serif fallbacks throughout so a slow font load
+     never flashes an unrelated face. */
+  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), ui-serif, Georgia, serif;
+  --font-heading: var(--font-caprasimo), ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /*
+   * Brand accents, usable as utilities: text-press, bg-proof/15, border-ochre …
+   *
+   * These names predate this palette and are kept on purpose — "press" and "ochre" are this
+   * app's own abstraction for "the primary/active brand colour" and "the warm secondary
+   * accent", not literal descriptions of a hue. Retinting them here (terracotta and sage,
+   * from the Citrus Writing / Organic design system) means the ~40 files that already
+   * reference text-press/bg-ochre/etc. pick up the new palette without being touched.
+   * Each now also carries a 100–900 ramp, matching the design system's own tonal steps, for
+   * the components being rebuilt screen-by-screen in later work.
+   */
+  --color-press: var(--press);
+  --color-press-foreground: var(--press-foreground);
+  --color-press-100: var(--press-100);
+  --color-press-200: var(--press-200);
+  --color-press-300: var(--press-300);
+  --color-press-400: var(--press-400);
+  --color-press-500: var(--press-500);
+  --color-press-600: var(--press-600);
+  --color-press-700: var(--press-700);
+  --color-press-800: var(--press-800);
+  --color-press-900: var(--press-900);
+
+  --color-proof: var(--proof);
+  --color-proof-foreground: var(--proof-foreground);
+
+  --color-ochre: var(--ochre);
+  --color-ochre-100: var(--ochre-100);
+  --color-ochre-200: var(--ochre-200);
+  --color-ochre-300: var(--ochre-300);
+  --color-ochre-400: var(--ochre-400);
+  --color-ochre-500: var(--ochre-500);
+  --color-ochre-600: var(--ochre-600);
+  --color-ochre-700: var(--ochre-700);
+  --color-ochre-800: var(--ochre-800);
+  --color-ochre-900: var(--ochre-900);
+
+  --color-slate: var(--slate);
+  --color-ink: var(--ink);
+  --color-stock: var(--stock);
+
+  /* The neutral ramp the design system draws its greys/tans from — cards, dividers, dimmed
+     text and the "empty" end of every status indicator. */
+  --color-neutral-100: var(--neutral-100);
+  --color-neutral-200: var(--neutral-200);
+  --color-neutral-300: var(--neutral-300);
+  --color-neutral-400: var(--neutral-400);
+  --color-neutral-500: var(--neutral-500);
+  --color-neutral-600: var(--neutral-600);
+  --color-neutral-700: var(--neutral-700);
+  --color-neutral-800: var(--neutral-800);
+  --color-neutral-900: var(--neutral-900);
+
+  /*
+   * Radius. Printed-corner minimalism is gone on purpose (see CLAUDE.md, "Superseded"): the
+   * new direction is buttons/tags/inputs/segmented-controls fully pill (rounded-full, 999px —
+   * set directly in each component, not through this scale) and cards/dialogs/the manuscript
+   * page on a large, soft radius. sm/md/lg are literal steps, not derived from one base value,
+   * because the design system's own 8/16/28px progression isn't a fixed ratio.
+   */
+  --radius-sm: 0.5rem; /* 8px */
+  --radius-md: 1rem; /* 16px */
+  --radius-lg: 1.75rem; /* 28px */
+  --radius-xl: 2.25rem; /* 36px */
+  --radius-2xl: 2.75rem; /* 44px */
+  --radius-3xl: 3.5rem; /* 56px */
+  --radius-4xl: 999px; /* pill ceiling */
+
+  /* ---------------------------------------------------------------- */
+  /*  Type scale                                                       */
+  /*  Tailwind's own scale jumps text-base (16px) → text-2xl (24px),   */
+  /*  so chrome metadata had no step and 30 sites reached for bracket  */
+  /*  values at 11px and 10px. These are those two steps. (Do not      */
+  /*  write such a bracket utility in a comment: Tailwind scans CSS    */
+  /*  files as well, and would emit a rule for it.)                    */
+  /* ---------------------------------------------------------------- */
+  --text-3xs: 0.6875rem; /* 11px — micro labels under a figure */
+  --text-3xs--line-height: 0.9375rem;
+
+  --text-2xs: 0.75rem; /* 12px — the panel/caption size */
+  --text-2xs--line-height: 1.0625rem;
+
+  --text-md: 1.125rem; /* 18px — the manuscript's reading size */
+  --text-md--line-height: 1.8;
+
+  /* Kept for the one label that stays uppercase; the rest now carry hierarchy
+     with weight and colour instead. */
+  --tracking-label: 0.08em;
+
+  /* ---------------------------------------------------------------- */
+  /*  Elevation                                                        */
+  /*  A light top edge plus a warm, soft drop shadow — the shadow only  */
+  /*  earns its place on layers that genuinely float. Values live      */
+  /*  per-theme as --elev-*.                                           */
+  /* ---------------------------------------------------------------- */
+  /* The three grounds. --chrome and --sheet exist so panels and the
+     manuscript page can be told apart from the well they sit in. */
+  --color-chrome: var(--chrome);
+  --color-sheet: var(--sheet);
+  --color-edge: var(--edge);
+  --color-divider: var(--divider);
+  /* The dim text tier. It is a colour, not `text-muted-foreground/70`. */
+  --color-subtle: var(--subtle);
+
+  --shadow-e0: 0 1px 2px -1px var(--elev-ambient);
+  --shadow-e1: 0 2px 6px -2px var(--elev-ambient), 0 1px 2px -1px var(--elev-ambient);
+  --shadow-e2: inset 0 1px 0 0 var(--elev-edge), 0 10px 24px -8px var(--elev-key),
+    0 3px 8px -3px var(--elev-ambient);
+  --shadow-e3: inset 0 1px 0 0 var(--elev-edge), 0 28px 56px -20px var(--elev-key),
+    0 8px 20px -8px var(--elev-ambient);
+
+  /* The four layout constants that are re-declared across panels. */
+  --spacing-chrome: 2.5rem; /* the 40px panel bar */
+  --spacing-header: 3rem; /* the app header */
+  --spacing-status: 2.75rem; /* the editor footer */
+}
+
+/*
+ * Motion: an Operate surface wants state changes, not choreography.
+ *
+ * A plain `@theme`, not `@theme inline`, and that difference matters here.
+ * `inline` substitutes a token's literal value into the utility and then drops
+ * the custom property, so `--ease-state` would not exist at runtime — and the
+ * binder row needs to name it from an inline style, because dnd-kit sets
+ * `transition` there and an inline style replaces the class outright.
+ */
+@theme {
+  --ease-out-quiet: cubic-bezier(0.16, 1, 0.3, 1); /* arriving: decelerate */
+  --ease-in-quiet: cubic-bezier(0.4, 0, 1, 1); /* leaving: accelerate away */
+  --ease-state: cubic-bezier(0.2, 0, 0.2, 1); /* changing in place */
+
+  /* The Run band's ambient "waiting to go out" pulse on a QUEUED chapter's dot. Its own
+     4s duration, outside the tint/state/surface scale above: this is ambience, not a state
+     transition, so it does not belong on that scale. Caught by the prefers-reduced-motion
+     rule in @layer base like every other animation in the app. */
+  --animate-run-breathe: run-breathe 4s ease-in-out infinite;
+}
+
+@keyframes run-breathe {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.09);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Palette                                                            */
+/*                                                                     */
+/*  Every colour token now lives in the generated palettes.css, which   */
+/*  carries five palettes in light and dark. The source of truth is     */
+/*  src/lib/theme/palettes.ts; run npm run theme:build after editing    */
+/*  it, and npm run theme:check to audit contrast (that check also      */
+/*  fails if the generated file is stale).                              */
+/*                                                                     */
+/*  Two axes select one of the ten: next-themes writes `.dark` (or      */
+/*  nothing) onto <html>, and the palette store writes `data-palette`.   */
+/*  The generated selectors are written to make those axes mutually     */
+/*  exclusive rather than to race on specificity — see the long note at */
+/*  the top of scripts/build-theme-css.ts, which is where that got       */
+/*  worked out.                                                         */
+/*                                                                     */
+/*  The ramps are ordered by ROLE, not by lightness: --neutral-100 is    */
+/*  the darkest neutral in a dark palette, on purpose. That is what     */
+/*  lets a component keep writing ochre-800 on ochre-100 and be right   */
+/*  in all ten. src/lib/theme/palettes.ts explains why at length.       */
+/* ------------------------------------------------------------------ */
+
+/*
+ * The values that are the same in every palette, because they are not colours: the shared
+ * radius token shadcn primitives read, and the three motion durations. Palette-independent
+ * on purpose — a writer switching to Solarized is choosing a colour scheme, not a different
+ * feel for how a menu opens.
+ */
+:root {
+  --radius: 1rem;
+
+  --duration-tint: 120ms; /* colour and opacity only */
+  --duration-state: 180ms; /* a control changing state in place */
+  --duration-surface: 240ms; /* a surface entering or leaving */
+}
+
+/* ------------------------------------------------------------------ */
+/*  Recipes with no Tailwind namespace of their own                    */
+/* ------------------------------------------------------------------ */
+
+/*
+ * One focus recipe for the whole app, drawn with `outline` rather than
+ * `ring`. It replaces four variants that had drifted apart: shadcn's
+ * `ring-3 ring-ring/50` plus a border tint, the binder's `ring-2
+ * ring-ring/40`, the status menu's `ring-2 ring-ring/50`, and the tab
+ * trigger's ring-plus-outline pair.
+ *
+ * `outline` because a ring is a box-shadow, so it shares one property
+ * with the --shadow-e* elevation stack and with the `ring-1` hairlines
+ * several surfaces already carry; an outline composes with both without
+ * bookkeeping. And an outline's offset can go negative, which the inset
+ * variant below depends on.
+ *
+ * Both are painted outside the element, so both are clipped by a
+ * scrolling ancestor — that part is not an outline advantage. The binder
+ * list is `overflow-x-hidden overflow-y-auto`; the codex list, the
+ * Progress panel and the manuscript column are `overflow-y-auto`, which
+ * computes overflow-x to `auto` as well. Hence the inset variant.
+ */
+@utility focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* For anything inside a scroll container or a tight row list, where a 2px
+   halo would be clipped by the container or collide with the row above.
+   Drawn inside the element's own box, so nothing can cut it off. */
+@utility focus-ring-inset {
+  &:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
+  }
+}
+
+/*
+ * Section headings, no longer shouted.
+ *
+ * Six uppercase letterspaced labels on one screen was the single most generic
+ * move in the app — it is what "designed" looks like when nothing else is
+ * carrying hierarchy. A heading is a heading because of its weight and its
+ * colour and the space around it, so that is what does the work now:
+ * semibold, sentence case, dimmed, at the caption size.
+ *
+ * `label-eyebrow` keeps the old treatment for the one place it still earns its
+ * keep — the breadcrumb above a chapter title, where small caps read as a
+ * running head rather than as decoration.
+ */
+@utility label-section {
+  font-size: var(--text-2xs);
+  line-height: var(--text-2xs--line-height);
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+@utility label-eyebrow {
+  font-size: var(--text-3xs);
+  line-height: var(--text-3xs--line-height);
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--subtle);
+}
+
+/*
+ * Chrome that waits to be needed.
+ *
+ * Icon-only controls in a panel bar sit back until the pointer is in their
+ * neighbourhood or they take focus. The floor is 60%, not 0: a control you
+ * cannot find is not restraint, it is a puzzle. Keyboard focus always brings a
+ * control to full strength, so nothing here costs a keyboard user anything.
+ */
+@utility chrome-quiet {
+  opacity: 0.6;
+  transition: opacity var(--duration-tint) var(--ease-state);
+
+  @media (hover: none) {
+    opacity: 1;
+  }
+
+  &:hover,
+  &:focus-visible,
+  &[data-popup-open],
+  &[aria-expanded="true"] {
+    opacity: 1;
+  }
+
+  .group\/chrome:hover & {
+    opacity: 1;
+  }
+}
+
+/*
+ * Both properties, not just `transition-duration`. Tailwind's own `duration-*`
+ * sets `--tw-duration` as well, and that is the variable `animate-in` /
+ * `animate-out` read (`animation: enter var(--tw-animation-duration,
+ * var(--tw-duration, .15s)) var(--tw-ease, ease) …`). Setting only the
+ * transition property would have left every enter/leave animation in the app
+ * silently on the 150ms default. `ease-state` and friends need no equivalent
+ * fix: they come from the `--ease-*` theme namespace, which Tailwind already
+ * wires to both `--tw-ease` and `transition-timing-function`.
+ */
+@utility duration-tint {
+  --tw-duration: var(--duration-tint);
+  transition-duration: var(--duration-tint);
+}
+@utility duration-state {
+  --tw-duration: var(--duration-state);
+  transition-duration: var(--duration-state);
+}
+@utility duration-surface {
+  --tw-duration: var(--duration-surface);
+  transition-duration: var(--duration-surface);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Base                                                               */
+/* ------------------------------------------------------------------ */
+@layer base {
+  /* `outline-ring/50` used to sit here too: it set an outline *colour* on
+     every element without an outline style, so it painted nothing and only
+     misled. Focus lives in the focus-ring utility above. */
+  * {
+    @apply border-border;
+  }
+
+  /*
+   * Nothing in the app respected this before. The `!important` is deliberate:
+   * it has to reach dnd-kit's inline `transition` on a dragging binder row.
+   * The save spinner keeps spinning — it reports work in flight, so freezing
+   * it would state something false.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 1ms !important;
+      scroll-behavior: auto !important;
+    }
+    .animate-spin {
+      animation-duration: 1s !important;
+      animation-iteration-count: infinite !important;
+    }
+  }
+
+  html {
+    @apply font-sans antialiased;
+    /* --scrollbar-* so the thumb is not a white wash in light mode. */
+    scrollbar-color: var(--scrollbar) transparent;
+    scrollbar-width: thin;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    /* --selection-mix is per palette mode: a pale accent at the light theme's 35%
+       over a dark ground is a glare, not a highlight. */
+    background: color-mix(in oklab, var(--press) var(--selection-mix, 35%), transparent);
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: var(--scrollbar);
+    border-radius: 999px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-hover);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Manuscript text and the live TipTap editor.                       */
+/* ------------------------------------------------------------------ */
+@layer components {
+  /*
+   * A range input with its own furniture removed. The Settings sliders draw their own
+   * track and thumb so they can carry the terracotta and sage tints; the native input stays
+   * on top, invisible, because it is what supplies the keyboard behaviour, the value
+   * announcement and the drag.
+   */
+  input[type="range"].bare-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: transparent;
+    border: 0;
+  }
+  input[type="range"].bare-range::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: transparent;
+    border: 0;
+  }
+  input[type="range"].bare-range::-moz-range-track {
+    background: transparent;
+  }
+
+  /* ---- The canvas well and the page that sits in it ---- */
+
+  /*
+   * Lamplight: a source above and behind the page, falling off across the desk. Two stops,
+   * not one — a single radial reads as a coloured blob, not as light on a surface. Sourced
+   * from --press (terracotta), the warm colour in this palette; at --lamplight: 0 the
+   * colour-mix resolves to transparent and the gradient costs nothing.
+   */
+  .canvas-well {
+    background:
+      radial-gradient(
+          80% 38% at 50% -10%,
+          color-mix(in oklab, var(--press) calc(var(--lamplight, 0.35) * 22%), transparent),
+          transparent 70%
+        ),
+      radial-gradient(
+          150% 90% at 50% -20%,
+          color-mix(in oklab, var(--press) calc(var(--lamplight, 0.35) * 9%), transparent),
+          transparent 78%
+        ),
+      var(--background);
+  }
+
+  /*
+   * Page brightness is a mix between the well and the page, so 0% is genuinely flush with
+   * the canvas: the setting says "how far the sheet lifts off the desk", and at zero it has
+   * not lifted at all. The lit edge and the drop fade with it, for the same reason.
+   */
+  .canvas-sheet {
+    position: relative;
+    background: color-mix(in oklab, var(--sheet) calc(var(--page-lift, 0.62) * 100%), var(--background));
+    box-shadow:
+      inset 0 1px 0 0 color-mix(in oklab, var(--elev-edge) calc(var(--page-lift, 0.62) * 100%), transparent),
+      0 24px 64px -20px color-mix(in oklab, var(--elev-key) calc(var(--page-lift, 0.62) * 100%), transparent),
+      0 6px 16px -8px color-mix(in oklab, var(--elev-ambient) calc(var(--page-lift, 0.62) * 100%), transparent);
+  }
+
+  /*
+   * Paper grain.
+   *
+   * A single fractal-noise tile, not an image request, and deliberately near the
+   * threshold of visibility. It rides --page-lift, so a page set flush against the
+   * desk loses its texture along with its shadow.
+   */
+  .canvas-sheet::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    /* Both the strength and the blend come from the palette. A multiply blend presses the
+       tile into a light page; on a dark one it only muddies it, so a dark mode lifts the
+       same tile with screen instead, and at a lower strength — screen reads far louder. */
+    opacity: calc(var(--page-lift, 0.62) * 0.5 * var(--grain-strength, 1));
+    mix-blend-mode: var(--grain-blend, multiply);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)' opacity='0.42'/%3E%3C/svg%3E");
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .canvas-sheet::before {
+      display: none;
+    }
+  }
+
+  /* The measure applies to the whole column — breadcrumb, title and prose share one edge —
+     so it lives here rather than on .manuscript, which is only the typography. */
+  .manuscript-column {
+    max-width: var(--measure, 36rem);
+    margin-inline: auto;
+  }
+
+  .manuscript {
+    /* Swappable per device (Settings → Manuscript face); falls back to the shipped default
+       (Newsreader) before the appearance store hydrates. */
+    font-family: var(--manuscript-font-family, var(--font-serif));
+    font-size: var(--manuscript-size, 1.125rem);
+    line-height: 1.8;
+    /* Ink, not text colour: warmed towards the page it sits on and held a step off
+       full strength, the way real ink never quite reaches the black it was ground
+       from. --ink-tint carries the warmth per theme. */
+    color: color-mix(in oklab, var(--foreground) 93%, var(--ink-tint));
+    font-optical-sizing: auto;
+    /* Serif text wants the real thing, not synthesised obliques. */
+    font-synthesis: none;
+  }
+
+  /* Only the paragraph under the caret stays at full strength. Opt-in, and off by default:
+     a focus aid for some writers and a distraction for others. */
+  [data-dim-others="on"] .chapter-editor > *:not(.has-focus) {
+    opacity: 0.45;
+    transition: opacity var(--duration-surface) var(--ease-state);
+  }
+
+  /* Typewriter scrolling keeps the working line away from the bottom edge. The editor does
+     the scrolling; this is the room it needs to scroll into. */
+  [data-typewriter="on"] .chapter-editor {
+    padding-bottom: 45vh;
+  }
+  .manuscript > * + * {
+    margin-top: 1.15em;
+  }
+  .manuscript h2,
+  .manuscript h3,
+  .manuscript h4 {
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--foreground);
+  }
+  .manuscript h2 {
+    font-size: 1.5rem;
+    margin-top: 2em;
+  }
+  .manuscript h3 {
+    font-size: 1.25rem;
+  }
+  .manuscript h4 {
+    font-size: 1.1rem;
+  }
+  .manuscript blockquote {
+    border-left: 2px solid color-mix(in oklab, var(--press) 60%, transparent);
+    padding-left: 1em;
+    color: var(--muted-foreground);
+    font-style: italic;
+  }
+  .manuscript ul,
+  .manuscript ol {
+    padding-left: 1.5em;
+  }
+  .manuscript ul {
+    list-style: disc;
+  }
+  .manuscript ol {
+    list-style: decimal;
+  }
+  .manuscript li + li {
+    margin-top: 0.35em;
+  }
+  .manuscript code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.9em;
+    background: var(--muted);
+    border-radius: 0.375rem;
+    padding: 0.1em 0.35em;
+  }
+  .manuscript pre {
+    background: var(--muted);
+    border-radius: var(--radius-md);
+    padding: 1em;
+    overflow-x: auto;
+  }
+  .manuscript pre code {
+    background: transparent;
+    padding: 0;
+  }
+  /* Scene break: an hr renders as a centred "* * *". */
+  .manuscript hr {
+    border: 0;
+    height: auto;
+    margin: 2.5em 0;
+    text-align: center;
+  }
+  .manuscript hr::after {
+    content: "* * *";
+    letter-spacing: 0.6em;
+    color: var(--muted-foreground);
+  }
+  /* @mentions of codex entries: a pill tag, matching how the design treats a name called
+     out of the prose (sage, not the primary terracotta, so a mention reads as "reference"
+     rather than "action"). */
+  .manuscript .mention {
+    color: var(--ochre-800);
+    background: var(--ochre-100);
+    border-radius: 999px;
+    padding: 1px 9px;
+    font-weight: 600;
+  }
+  /* In the editor a mention is hoverable, so it earns a pointer and a brighter hover state. */
+  .chapter-editor .mention {
+    cursor: help;
+    transition: background-color 120ms ease;
+  }
+  .chapter-editor .mention:hover {
+    background: var(--ochre-200);
+  }
+  /* The decoration ProseMirror wraps around the "@qu" you are still typing. */
+  .chapter-editor .mention-suggestion {
+    color: var(--ochre-800);
+    background: var(--ochre-100);
+    border-radius: 999px;
+  }
+
+  /* ---- The live TipTap editor (ProseMirror root) ---- */
+  .chapter-editor {
+    outline: none;
+    min-height: 55vh;
+    caret-color: var(--press);
+  }
+  .chapter-editor p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+    color: color-mix(in oklab, var(--muted-foreground) 60%, transparent);
+    font-style: italic;
+  }
+  .chapter-editor a {
+    color: var(--press);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .chapter-editor .ProseMirror-selectednode {
+    outline: 2px solid color-mix(in oklab, var(--press) 50%, transparent);
+    outline-offset: 4px;
+    border-radius: 0.375rem;
+  }
+  .chapter-editor hr.ProseMirror-selectednode::after {
+    color: var(--press);
+  }
+}

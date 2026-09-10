@@ -1,0 +1,266 @@
+// Citrus Writing — Prisma schema
+// Hierarchy: Novel → (Volume?) → (Arc?) → Chapter.
+// Volumes and arcs are optional containers. A chapter has at most ONE parent pointer:
+//   - arcId set      → lives inside that arc (recommended)
+//   - volumeId set   → lives directly under a volume, outside any arc
+//   - neither        → lives at the novel root
+// `order` is the position among all siblings of the same container, regardless of type.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum ChapterStatus {
+  DRAFT
+  EDITED
+  QUEUED
+  PUBLISHED
+}
+
+enum CadenceFrequency {
+  WEEKLY
+  TWICE_WEEKLY
+  FORTNIGHTLY
+}
+
+enum CodexCategory {
+  CHARACTER
+  LOCATION
+  ITEM
+}
+
+model Novel {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  /// The release schedule ("the Buffer"). None of this publishes anything — it's how the
+  /// buffer itself is measured, turning "I have three chapters done" into "I am covered
+  /// until October".
+  cadenceFrequency   CadenceFrequency @default(WEEKLY)
+  /// Comma-separated JS weekdays (0=Sun..6=Sat). One value for Weekly/Fortnightly, two for
+  /// Twice weekly.
+  cadenceWeekdays    String           @default("6")
+  /// "HH:mm", the local time a chapter is meant to go out.
+  cadenceTime        String           @default("09:00")
+  /// Weeks of finished, queued work this novel is aiming to stay ahead by.
+  cadenceTargetWeeks Int              @default(3)
+  /// Reference date for Fortnightly's on/off week pattern. Reset whenever the cadence is
+  /// changed, so the pattern always restarts cleanly from the change rather than drifting
+  /// against some long-past date. Weekly and Twice weekly ignore it.
+  cadenceAnchor      DateTime         @default(now())
+
+  volumes      Volume[]
+  arcs         Arc[]
+  chapters     Chapter[]
+  codexEntries CodexEntry[]
+  codexTies    CodexTie[]
+  days         NovelDay[]
+}
+
+/// Optional grouping level. Deleting a volume releases its arcs and chapters to the novel root.
+model Volume {
+  id        String   @id @default(cuid())
+  novelId   String
+  title     String
+  order     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  novel    Novel     @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  arcs     Arc[]
+  chapters Chapter[]
+
+  @@index([novelId, order])
+}
+
+/// Recommended home for chapters. Lives at the novel root or inside a volume.
+model Arc {
+  id        String   @id @default(cuid())
+  novelId   String
+  volumeId  String?
+  title     String
+  order     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  novel    Novel     @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  volume   Volume?   @relation(fields: [volumeId], references: [id], onDelete: SetNull)
+  chapters Chapter[]
+
+  @@index([novelId, volumeId, order])
+}
+
+model Chapter {
+  id          String        @id @default(cuid())
+  novelId     String
+  volumeId    String?
+  arcId       String?
+  title       String
+  order       Int
+  status      ChapterStatus @default(DRAFT)
+  /// Serialized TipTap (ProseMirror) JSON document. Empty string means "no content yet".
+  content     String        @default("")
+  wordCount   Int           @default(0)
+  notes       String?
+  publishedAt DateTime?
+  /// The release-schedule date this chapter is queued for, if any — a plan, independent of
+  /// `status` (see `Novel.cadenceFrequency`). Chapters keep this even if their status changes
+  /// afterward; only unscheduling clears it.
+  scheduledFor DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  novel      Novel          @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  volume     Volume?        @relation(fields: [volumeId], references: [id], onDelete: SetNull)
+  arc        Arc?           @relation(fields: [arcId], references: [id], onDelete: SetNull)
+  codexLinks ChapterCodex[]
+  snapshots  ChapterSnapshot[]
+
+  @@index([novelId, volumeId, arcId, order])
+  @@index([novelId, status])
+  @@index([novelId, scheduledFor])
+}
+
+/// The Light Codex: characters, locations, and items that can be @mentioned in chapters.
+model CodexEntry {
+  id          String        @id @default(cuid())
+  novelId     String
+  name        String
+  category    CodexCategory @default(CHARACTER)
+  /// One-line tagline shown in the inline hover card.
+  summary     String?
+  /// Longer lore text.
+  description String?
+  avatarUrl   String?
+  /// Comma-separated alternate names, used by @mention search.
+  aliases     String?
+  /// Structured character-sheet fields (e.g. Role/Wants/Fears/Tell), serialized as a JSON
+  /// array of {label, value} pairs. A flexible list rather than fixed columns so a future
+  /// template for Location or Item entries needs no migration of its own.
+  sheetFields String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  novel    Novel          @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  chapters ChapterCodex[]
+  tiesFrom CodexTie[]     @relation("TieFrom")
+  tiesTo   CodexTie[]     @relation("TieTo")
+
+  @@index([novelId, category])
+  @@index([novelId, name])
+}
+
+/// A relationship between two codex entries, authored from one entry's point of view — "a
+/// tie is a sentence, not a diagram". Shown only on `fromEntry`'s page; add the reverse tie
+/// separately if the other entry's page should carry it too.
+model CodexTie {
+  id          String   @id @default(cuid())
+  novelId     String
+  fromEntryId String
+  toEntryId   String
+  /// Short tag shown as a pill, e.g. "mentor", "carries".
+  label       String
+  /// The sentence describing the tie, from fromEntry's perspective.
+  description String
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  novel     Novel      @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  fromEntry CodexEntry @relation("TieFrom", fields: [fromEntryId], references: [id], onDelete: Cascade)
+  toEntry   CodexEntry @relation("TieTo", fields: [toEntryId], references: [id], onDelete: Cascade)
+
+  @@index([fromEntryId, order])
+  @@index([toEntryId])
+}
+
+/// Mention index: which codex entries appear in which chapters.
+model ChapterCodex {
+  chapterId    String
+  codexEntryId String
+  mentionCount Int      @default(1)
+  createdAt    DateTime @default(now())
+
+  chapter    Chapter    @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  codexEntry CodexEntry @relation(fields: [codexEntryId], references: [id], onDelete: Cascade)
+
+  @@id([chapterId, codexEntryId])
+  @@index([codexEntryId])
+}
+
+/// A point-in-time copy of a chapter, kept so a bad save is recoverable.
+///
+/// This app has no undo across sessions, and an empty editor mounting over content that
+/// would not parse once came close to destroying a chapter. Snapshots are taken of the
+/// *previous* text on save, throttled, and pruned to a fixed number per chapter.
+model ChapterSnapshot {
+  id        String   @id @default(cuid())
+  chapterId String
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  /// Serialized TipTap JSON, exactly as it was stored.
+  content   String
+  wordCount Int      @default(0)
+  /// Why this one was kept: "periodic" or "large-cut". Shown in the restore list.
+  reason    String   @default("periodic")
+  createdAt DateTime @default(now())
+
+  @@index([chapterId, createdAt])
+}
+
+/// One row per novel per local calendar day: what was written in *this* story.
+///
+/// Separate from WritingSession on purpose. The counts a writer sees for a book have to be
+/// that book's — 600 words in one novel are not 600 words in another — but the daily goal and
+/// the streak are facts about the *writer*, so those stay on WritingSession and sum across
+/// every story. Additive: no existing session row is touched or re-attributed.
+model NovelDay {
+  id           String   @id @default(cuid())
+  novelId      String
+  novel        Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  /// Local calendar day as "YYYY-MM-DD".
+  day          String
+  /// Net new words for this novel today, floored at zero.
+  wordsWritten Int      @default(0)
+  wordsAdded   Int      @default(0)
+  wordsRemoved Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([novelId, day])
+  @@index([day])
+}
+
+/// One row per local calendar day the author wrote, across every novel.
+model WritingSession {
+  id           String   @id @default(cuid())
+  /// Local calendar day as "YYYY-MM-DD".
+  day          String   @unique
+  /// Net new words for the day (deletions subtract, floored at zero). Drives the goal and streak.
+  wordsWritten Int      @default(0)
+  /// Gross words added today, summed over every save (see `src/lib/editor/word-diff.ts`).
+  wordsAdded   Int      @default(0)
+  /// Gross words removed today. `wordsAdded - wordsRemoved` is the true net, which may be negative.
+  wordsRemoved Int      @default(0)
+  /// Consecutive writing days ending on this day.
+  streakCount  Int      @default(0)
+  goalMet      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+/// Single-row settings table (id is always "default").
+model AuthorSettings {
+  id            String   @id @default("default")
+  dailyGoal     Int      @default(1000)
+  sweetSpotMin  Int      @default(1500)
+  sweetSpotMax  Int      @default(2500)
+  exportProfile String   @default("royalroad")
+  updatedAt     DateTime @updatedAt
+}
