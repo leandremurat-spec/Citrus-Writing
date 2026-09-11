@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { formatPrice, perMonthCents, PLANS, type BillingInterval } from "@/lib/billing/plans";
 import { AuthWordmark } from "@/components/auth/auth-parts";
 import { CheckoutForm } from "@/components/billing/checkout-form";
+import { LegalConsent } from "@/components/legal/legal-consent";
 
 /**
  * Where the embedded payment form lives.
@@ -56,6 +57,16 @@ export default async function CheckoutPage({
         <div className="mt-7 flex flex-col gap-4 rounded-[2rem] bg-neutral-100 p-5 ring-1 ring-edge sm:p-7">
           <CheckoutForm interval={interval} />
         </div>
+
+        <LegalConsent action="Subscribing" className="mt-5 text-2xs leading-relaxed text-subtle" />
+
+        <p className="mt-2 text-2xs leading-relaxed text-subtle">
+          Renewal and cancellation are set out in the{" "}
+          <Link href="/legal/refunds" className="focus-ring rounded-full text-press hover:text-press-800">
+            Refund and Subscription Policy
+          </Link>
+          . Your card is handled by Stripe and never reaches us.
+        </p>
 
         <p className="mt-5 text-2xs leading-relaxed text-subtle">
           <Link href="/pricing" className="focus-ring rounded-full text-press hover:text-press-800">

@@ -12,6 +12,7 @@ import { updateWritingTargets } from "@/lib/actions/settings";
 import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-rules";
 import { formatPrice, perMonthCents, PLANS, type BillingInterval, type PlanId } from "@/lib/billing/plans";
 import { formatNumber } from "@/lib/format";
+import { legalHref, LEGAL_DOCUMENTS } from "@/content/legal";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Segmented, type SegmentedOption } from "@/components/ui/segmented";
@@ -112,7 +113,34 @@ export function AccountSettings({
       <TargetsCard targets={targets} />
       <PasswordCard hasPassword={user.hasPassword} />
       <DangerCard email={user.email} />
+      <LegalRow />
     </div>
+  );
+}
+
+/**
+ * The three documents, at the foot of the one page a signed-in writer visits about their
+ * account rather than their manuscript.
+ *
+ * The marketing footer carries them too, but a writer inside the app never sees that footer —
+ * and this is the page they are on when the questions those documents answer actually occur to
+ * them: what am I being charged, what happens if I stop, what have you got of mine. Quiet, and
+ * not in a card, because it is a signpost rather than a setting.
+ */
+function LegalRow() {
+  return (
+    <nav aria-label="Legal" className="flex flex-wrap items-center gap-x-6 gap-y-2 px-6 pt-1 pb-2 text-2xs text-subtle sm:px-8">
+      {/* `doc`, not `document`: this is a client component, and the global is a real thing here. */}
+      {LEGAL_DOCUMENTS.map((doc) => (
+        <Link
+          key={doc.slug}
+          href={legalHref(doc.slug)}
+          className="focus-ring rounded-full text-press transition-colors duration-tint ease-state hover:text-press-800"
+        >
+          {doc.title}
+        </Link>
+      ))}
+    </nav>
   );
 }
 

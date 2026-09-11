@@ -4,6 +4,10 @@ import * as React from "react";
 import Script from "next/script";
 
 import type { BillingInterval } from "@/lib/billing/plans";
+import { CheckoutAcknowledgement } from "./checkout-acknowledgement";
+
+/** Shown when someone presses pay without ticking the box, and cleared when they tick it. */
+const ACK_REQUIRED = "Please confirm the box above before paying — it is what starts your subscription today.";
 
 /**
  * The embedded Stripe payment form.
@@ -74,6 +78,22 @@ export function CheckoutForm({ interval }: { interval: BillingInterval }) {
   const started = React.useRef(false);
   const formRef = React.useRef<CheckoutFormHandle | null>(null);
 
+  /*
+   * The withdrawal-right acknowledgement, held twice on purpose.
+   *
+   * The state drives the tick box. The ref is what the `confirm` handler reads, because that
+   * handler is registered once while the SDK is being built and would otherwise close over
+   * whatever the value was at that moment — which is always `false`, since the form mounts
+   * before anyone has had a chance to tick anything.
+   */
+  const [acknowledged, setAcknowledged] = React.useState(false);
+  const acknowledgedRef = React.useRef(false);
+  const acknowledge = (next: boolean) => {
+    acknowledgedRef.current = next;
+    setAcknowledged(next);
+    if (next) setError((current) => (current === ACK_REQUIRED ? null : current));
+  };
+
   const start = React.useCallback(async () => {
     if (started.current) return;
     started.current = true;
@@ -121,6 +141,15 @@ export function CheckoutForm({ interval }: { interval: BillingInterval }) {
       if (loadActionsResult.type === "success" && loadActionsResult.actions) {
         const { actions } = loadActionsResult;
         form.on("confirm", async (event) => {
+          // The control, rather than the courtesy. Stripe's own submit button lives inside its
+          // iframe and cannot be disabled from here, so refusing the confirmation is the only
+          // place the acknowledgement can actually be required — and it is the place that
+          // matters, because it is the step that takes the money.
+          if (!acknowledgedRef.current) {
+            setError(ACK_REQUIRED);
+            return;
+          }
+
           try {
             await actions.confirm({ formConfirmEvent: event });
           } catch (cause) {
@@ -145,6 +174,8 @@ export function CheckoutForm({ interval }: { interval: BillingInterval }) {
   return (
     <>
       <Script src="https://js.stripe.com/dahlia/stripe.js" strategy="afterInteractive" onReady={() => void start()} />
+
+      <CheckoutAcknowledgement interval={interval} checked={acknowledged} onChange={acknowledge} />
 
       {error ? (
         <p role="alert" className="rounded-md bg-proof/5 px-4 py-3 text-sm text-proof">

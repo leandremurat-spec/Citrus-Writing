@@ -9,6 +9,7 @@ import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-rules";
 // Aliased: `signUp` is already taken in this file by the server action above.
 import { signUp as copy } from "@/content/site-copy";
 import { Button } from "@/components/ui/button";
+import { LegalConsent } from "@/components/legal/legal-consent";
 import {
   attempt,
   AuthCard,
@@ -107,6 +108,8 @@ export function SignUpForm({ providers, next }: { providers: Provider[]; next: s
         >
           {pending ? copy.submitPending : copy.submit}
         </Button>
+
+        <LegalConsent action="Creating an account" />
       </form>
 
       <p className="text-2xs leading-relaxed text-subtle">

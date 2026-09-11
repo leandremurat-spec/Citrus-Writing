@@ -32,7 +32,7 @@ export default async function PricingPage() {
   const user = await getCurrentUser();
 
   return (
-    <div className="min-h-dvh bg-background text-foreground [text-wrap:pretty]">
+    <div className="min-h-dvh overflow-x-clip bg-background text-foreground [text-wrap:pretty]">
       <MarketingNav user={user} />
 
       <MarketingWidth>

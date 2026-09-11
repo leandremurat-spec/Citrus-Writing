@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { SessionUser } from "@/lib/auth/session";
+import { legalHref, LEGAL_DOCUMENTS } from "@/content/legal";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Mark } from "@/components/workspace/wordmark";
@@ -83,12 +84,22 @@ export function MarketingNav({
   );
 }
 
+/**
+ * The footer, which is also where the legal documents live.
+ *
+ * A footer is where people look for them and where every reviewer — an app store, a payment
+ * processor's onboarding check, a business customer's procurement form — expects to find them,
+ * so all three are linked directly rather than behind a single "Legal" link. The labels are the
+ * short ones (`footerLabel`), and the list is read from `@/content/legal` rather than written
+ * out here, so a fourth document does not mean remembering this file and a slug cannot be
+ * spelled one way here and another in the route that serves it.
+ */
 export function MarketingFooter({ note }: { note: string }) {
   return (
     <footer
       className={cn(
         MAX_WIDTH,
-        "flex flex-wrap items-center gap-x-7 gap-y-3 py-8 text-xs text-subtle sm:py-11 lg:py-13",
+        "flex flex-wrap items-center gap-x-6 gap-y-3 py-8 text-xs text-subtle sm:py-11 lg:py-13",
       )}
     >
       <span className="flex items-center gap-2.5">
@@ -98,6 +109,15 @@ export function MarketingFooter({ note }: { note: string }) {
       <Link href="/pricing" className="focus-ring rounded-full text-press hover:text-press-800">
         Pricing
       </Link>
+      {LEGAL_DOCUMENTS.map((document) => (
+        <Link
+          key={document.slug}
+          href={legalHref(document.slug)}
+          className="focus-ring rounded-full text-press whitespace-nowrap hover:text-press-800"
+        >
+          {document.footerLabel}
+        </Link>
+      ))}
       <Link href="/sign-in" className="focus-ring rounded-full text-press hover:text-press-800">
         Sign in
       </Link>

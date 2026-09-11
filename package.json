@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "node node_modules/tsx/dist/cli.mjs scripts/build-theme-css.ts && node node_modules/next/dist/bin/next dev",
-    "build": "node node_modules/tsx/dist/cli.mjs scripts/build-theme-css.ts && node node_modules/prisma/build/index.js generate && node node_modules/next/dist/bin/next build",
+    "build": "node node_modules/tsx/dist/cli.mjs scripts/build-theme-css.ts && node node_modules/tsx/dist/cli.mjs scripts/legal-check.ts && node node_modules/prisma/build/index.js generate && node node_modules/next/dist/bin/next build",
     "start": "node node_modules/next/dist/bin/next start",
     "lint": "node node_modules/eslint/bin/eslint.js",
     "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
@@ -22,7 +22,8 @@
     "db:delete-novel": "node node_modules/tsx/dist/cli.mjs scripts/db-delete-novel.ts",
     "config:check": "node node_modules/tsx/dist/cli.mjs scripts/config-check.ts",
     "theme:build": "node node_modules/tsx/dist/cli.mjs scripts/build-theme-css.ts",
-    "theme:check": "node node_modules/tsx/dist/cli.mjs scripts/theme-check.ts"
+    "theme:check": "node node_modules/tsx/dist/cli.mjs scripts/theme-check.ts",
+    "legal:check": "node node_modules/tsx/dist/cli.mjs scripts/legal-check.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

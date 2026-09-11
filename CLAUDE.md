@@ -1456,3 +1456,170 @@ dark, all clear. Two things were added to its table:
   *neutral*-ramp caption on a tinted circle — a combination nothing in the workspace had painted.
 
 The four mid-ramp status marks remain reported-but-not-enforced, unchanged.
+
+## The legal pages
+
+Terms of Service, Privacy Policy and Refund and Subscription Policy, at `/legal/terms`,
+`/legal/privacy` and `/legal/refunds`, with an index at `/legal`. Written against what this
+codebase actually does rather than against a template — every factual claim in the privacy
+policy is one someone could check by reading the source, which is why it can say plainly that
+there is no analytics of any kind, that session rows carry no IP address, that the typefaces
+are self-hosted so no request leaves for Google, and that the one cookie is strictly necessary
+and therefore needs no banner.
+
+Three documents, one renderer (`components/legal/legal-page.tsx`), one type
+(`content/legal/document.ts`). Content lives in `src/content/legal/` beside `site-copy.ts` and
+follows its spirit — plain strings, no HTML — but with its own two-rule inline grammar in
+`LegalText`: `*bold*` and `[label](href)`. `Emphasis` was deliberately not extended to cover
+the second. Its contract is "one rule, and an unmatched star is a star", which is what makes
+`site-copy.ts` safe for a non-programmer to edit; giving that file a link syntax is giving it a
+new way to break the landing page.
+
+### Prices are read, never restated
+
+The refund policy quotes `$9`, `$84` and `$7 a month` by calling into `lib/billing/plans.ts`,
+the same rule the pricing page follows and for a stronger reason: a stale price on a marketing
+page is embarrassing, and a stale price in a refund policy is a misrepresentation.
+
+### Four values must be filled in, and a script enforces it
+
+`content/legal/details.ts` ships the legal entity, its address, its country and a contact
+address as the sentinel `‹fill in›`. UK/EU law requires the first three (the controller's
+identity and a *geographic* address — a PO box or an email does not satisfy it) and the rights
+sections are worthless without the fourth.
+
+`npm run legal:check` fails while any remains, and it runs inside `npm run build`, so a deploy
+cannot quietly ship a policy that names nobody. It also resolves every internal
+`[label](/legal/slug#anchor)` against the real section ids, because anchors get renamed and a
+cross-reference that lands on nothing is a clause the reader cannot follow.
+
+### "Cancel anytime, no refunds" needed a mechanism, not just a sentence
+
+The commercial stance is the writer's: cancel any day, access runs to the end of the paid
+period, the unused part is not returned. That is a legitimate position and it is what the
+policy says.
+
+It could not be the *whole* position for an international userbase. A UK or EU consumer has a
+14-day right to withdraw from a distance contract that no term of ours can remove; a page
+flatly denying it would be unenforceable exactly where it mattered and would itself be an
+unfair commercial practice. So the right is stated, and the lawful mechanism is used instead of
+pretending it is not there — where the consumer expressly asks for the service to begin within
+the 14 days **and acknowledges losing the right once it has been fully performed**, the right
+falls away.
+
+`components/billing/checkout-acknowledgement.tsx` is that consent: a box the writer ticks
+themselves, **never pre-ticked** (a pre-ticked box is not consent, and the waiver would be
+worth nothing), alongside a plain disclosure of price, renewal and cancellation that also
+satisfies the pre-contract information rules and the US auto-renewal statutes.
+
+**The refusal is in `CheckoutForm`'s `confirm` handler, not on a disabled button.** Stripe's
+submit button lives inside its own iframe and cannot be disabled from here, so the confirm
+handler is the only place the acknowledgement can actually be required — and it is the right
+place anyway, being the step that takes the money. The handler reads a **ref**, not the state:
+it is registered once while the SDK is being built, and would otherwise close over `false`
+forever.
+
+### Where they are linked from
+
+The marketing footer carries all three directly rather than behind one "Legal" link — an app
+store, a payment processor's onboarding check and a procurement form all want a direct one.
+The list is read from `@/content/legal`, so a fourth document is added in one place. Short
+names (`footerLabel`) there; full titles on the account page, which is the one surface a
+signed-in writer sees that is about their account rather than their manuscript, and the place
+they are standing when those questions occur to them.
+
+`LegalConsent` is the line under a sign-up or checkout button. **A sentence, not a tick box**,
+and the distinction is real: an unticked box is right for a *separate* consent — the marketing
+opt-in beside it is one — but agreeing to the terms is not separate from creating the account,
+it *is* creating the account. A box that cannot be left unticked and still get you anywhere is
+friction pretending to be a choice. What makes the sentence hold up is where it sits:
+immediately under the button, before the press, both documents named and linked. It is
+deliberately not in `site-copy.ts`; it is the record of what was agreed to, and reworded by
+someone rewriting the marketing it stops matching the thing it points at.
+
+### Two claims the pricing page was making that the code did not honour
+
+The FAQ answered "Can I get my work out?" with "Whole serial … on the free plan", and the
+sign-up page promised "Export the whole serial whenever you like, even on the free plan".
+Drawer's `exportScopes` is `["chapter"]`, and the comparison table three sections above the FAQ
+said so. Both now describe what the free plan actually does — every chapter, all three formats
+— and note that whole-arc and whole-serial exports are what Serial adds. Worth knowing that a
+pass over the legal surfaces is what found them: the documents and the sales copy have to agree,
+and only one of them is audited.
+
+### Colour and overflow
+
+The legal pages add **no line to `scripts/theme-check.ts`**, because they reach only for
+pairings it already enforces — `neutral-800` body, `--foreground` headings and bold, `--press`
+links, `ochre-900` on `ochre-100` for the gist panel, `neutral-800` on `neutral-100` for a
+set-apart note. Picking an unaudited pairing for the one page nobody re-reads after launch is
+how a palette quietly acquires an unreadable corner.
+
+They also carry `overflow-x-clip`, and so does the pricing page now. The decorative circle the
+marketing pages park top-right sits at `right: min(0px, 50vw - 760px)`, which puts it outside
+the viewport below about 1520px — the pricing page had been shipping a horizontal scrollbar
+with nothing but a background disc to scroll to, and these pages inherited it by copying the
+decoration. **`clip` rather than `hidden`**: `overflow-x: hidden` computes `overflow-y: auto`,
+which makes the element a scroll container and leaves the "On this page" nav sticking to *that*
+instead of the viewport, so it would scroll away. `clip` establishes no scroll container.
+
+### Canada, and specifically Quebec
+
+`Citrus Writing Inc.` is established in Montreal, and that decides more of these documents than a
+line in the footer. Three regimes apply at once, and the documents name all three rather than
+picking one: **PIPEDA** federally, **Law 25** in Quebec, and — because the product is sold
+internationally — UK/EU **GDPR** rights extended to everyone, which was already the stance.
+
+What being in Quebec actually changed, beyond the address:
+
+- **A published Privacy Officer.** Law 25 requires the title and contact details of the person
+  responsible for personal information to be public. `privacyOfficerTitle` in `details.ts`, said
+  in the privacy policy's first section. By default the role sits with the person of highest
+  authority in the enterprise; naming the individual is better once there is more than one.
+- **The transfer out of Quebec is disclosed, not buried.** Supabase, Railway, Stripe and Resend
+  are all outside Canada, so every manuscript lives in the United States. Law 25 obliges us to
+  say so *and* to have assessed beforehand that the information gets adequate protection where it
+  lands. It is in the gist as well as the body, because that is the fact a Quebec writer is most
+  likely to want and least likely to scroll for.
+- **The regulators are a list now, not the ICO.** The CAI in Quebec, the OPC federally, the ICO
+  in the UK, the reader's own authority in the EEA. Breach notification names the first two.
+- **Portability is Law 25's word for what export already did**, and de-indexing is a right the
+  policy states even though nothing here is ever published by us.
+- **Age 14 is Quebec's line**, below which consent comes from a parent. The app's own threshold
+  sits above it, so it should never bind — stated anyway, because "should never" is not "cannot".
+- **Governing law is `${governingLaw}` / `${forum}`** — Quebec plus the federal laws applicable
+  in it, judicial district of Montreal — which is why `country` alone was not enough and
+  `province`, `governingLaw` and `forum` are their own fields.
+- **The Quebec CPA outranks the refund policy**, and both documents say so. It gives a consumer
+  the right to sue in their own district whatever a forum clause says, voids terms that remove
+  it, and carries its own rules on renewals and unilateral changes. The checkout acknowledgement
+  waives the *EU/UK* withdrawal right; it does not and cannot waive the CPA.
+- **Currency and tax are stated at the price.** A Canadian company charging USD means a
+  foreign-transaction fee the writer's bank adds and we do not see — better said on the page than
+  discovered on a statement. GST/QST for Canadian customers.
+
+#### The French version is owed, and the terms say so instead of pretending
+
+The Charter of the French Language, as amended in 2022, is stricter than the familiar one-line
+clause suggests. These terms are a **contract of adhesion**, and for those the Charter requires
+the French version be provided *first*, with the reader bound by an English one only after
+examining the French and expressly choosing it. Reciting that "the parties required this be drawn
+up in English" is the standard wording, it is necessary, and on its own **it does not discharge
+that obligation** for a consumer contract of adhesion offered from Quebec.
+
+So `terms.ts` carries a `language` section saying what is true — the French version is owed and
+is being prepared — plus the same in French, and an undertaking that the more favourable reading
+applies until it exists. **This is a translation job with a real deadline, not a code change**,
+and it is the one outstanding legal obligation the code cannot close by itself.
+
+#### A consent collected for an email that is never sent
+
+Writing the "why we hold it" table turned one up: `notifyStale` is offered on the sign-up form
+*and* the account page, stored on `User`, and **nothing anywhere sends that message**. The only
+mail this app sends is the password reset.
+
+Rather than describe a data use that does not happen, the privacy policy says exactly that — the
+box records a preference, nothing goes out, and when it does it will carry the name, postal
+address and one-press unsubscribe that CASL requires of a commercial electronic message. Worth
+knowing that collecting an opt-in for a feature that does not exist is the shape of a dark
+pattern arrived at by accident, and that the honest fix is to ship the email or drop the box.

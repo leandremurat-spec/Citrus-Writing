@@ -249,7 +249,7 @@ export const pricing = {
       {
         question: "Can I get my work out?",
         answer:
-          "Whole serial, HTML or Markdown or plain text, one press — on the free plan. We never keep your serials hostage.",
+          "Always. Every chapter exports as HTML, Markdown or plain text on the free plan, and Serial adds whole-arc and whole-serial exports in one pass. We never keep your serials hostage.",
       },
     ],
   },
@@ -280,7 +280,7 @@ export const signUp = {
   /** The three ticked promises down the left. Add or remove lines freely. */
   promises: [
     "Twenty versions of every chapter, kept automatically from the first word",
-    "Export the whole serial whenever you like, even on the free plan",
+    "Export every chapter you write — HTML, Markdown or plain text — on the free plan",
     "Your fiction is never used to train anything",
   ],
 
