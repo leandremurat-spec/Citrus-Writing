@@ -384,6 +384,7 @@ export type PasswordResetCreateOrConnectWithoutUserInput = {
 
 export type PasswordResetCreateManyUserInputEnvelope = {
   data: Prisma.PasswordResetCreateManyUserInput | Prisma.PasswordResetCreateManyUserInput[]
+  skipDuplicates?: boolean
 }
 
 export type PasswordResetUpsertWithWhereUniqueWithoutUserInput = {
@@ -1163,6 +1164,7 @@ export type PasswordResetCreateManyArgs<ExtArgs extends runtime.Types.Extensions
    * The data used to create many PasswordResets.
    */
   data: Prisma.PasswordResetCreateManyInput | Prisma.PasswordResetCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1181,6 +1183,7 @@ export type PasswordResetCreateManyAndReturnArgs<ExtArgs extends runtime.Types.E
    * The data used to create many PasswordResets.
    */
   data: Prisma.PasswordResetCreateManyInput | Prisma.PasswordResetCreateManyInput[]
+  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

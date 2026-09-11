@@ -15,7 +15,10 @@ Citrus Writing** and **The Citrus Writing overhaul** below, shipped across the s
 - Next.js 16 (App Router, Turbopack), React 19, TypeScript, Tailwind CSS v4
 - shadcn v4 (`base-nova` style on Base UI primitives), Lucide icons
 - TipTap v3 (`@tiptap/*` 3.31) for the editor
-- Prisma 7 + SQLite through a custom `node:sqlite` driver adapter (`src/lib/db/node-sqlite-adapter.ts`)
+- Prisma 7 + Postgres (Supabase), through `@prisma/adapter-pg`. Was SQLite via a custom
+  `node:sqlite` driver adapter (`src/lib/db/node-sqlite-adapter.ts`, now unused) until
+  2026-09-10, when local dev needed to run against the same database as the Railway deploy —
+  see **Database** below.
 - dnd-kit for the Serial Binder drag and drop
 
 ## Environment quirks (read before running anything)
@@ -24,8 +27,11 @@ Citrus Writing** and **The Citrus Writing overhaul** below, shipped across the s
   and bare `next`/`prisma` calls fail inside this folder with a cryptic `'Ink' is not recognized`
   error. Every `package.json` script therefore invokes tools through `node node_modules/...`
   directly. Always use `npm run <script>`; never `npx`.
-- **Windows on ARM64.** better-sqlite3 and libsql have no ARM64 Windows binaries. Node 24's
-  built-in `node:sqlite` is used instead via the adapter above. Do not add native SQLite packages.
+- **Windows on ARM64.** This is why the database is Postgres over `pg` rather than a native
+  SQLite binding: better-sqlite3 and libsql have no ARM64 Windows prebuilds, and `pg` is a pure
+  JS client (TCP wire protocol, no native compilation), so it has no ARM64 problem to work
+  around. `src/lib/db/node-sqlite-adapter.ts` is the earlier SQLite-era workaround for the same
+  constraint, unused now but left in place — see **Database** below.
 - **Node** lives at `C:\Program Files\nodejs` and may be missing from a shell's PATH.
 - **`npm run build` then `npm run dev` can poison `.next`.** Starting the dev server on a
   directory a production build just wrote has twice left Turbopack's postcss worker crashing
@@ -33,8 +39,8 @@ Citrus Writing** and **The Citrus Writing overhaul** below, shipped across the s
   production. `rm -rf .next` and restart. If dev breaks right after a build and the build
   passed, suspect this before suspecting the stylesheet.
 - The Prisma CLI config is `prisma7.config.ts` (the name Prisma 7.10 generated and loads).
-  It does not read `.env`; both it and the app import the default URL from
-  `src/lib/db/database-url.ts` (`file:./prisma/dev.db`).
+  It does not read `.env`; both it and the app import `DATABASE_URL` from
+  `src/lib/db/database-url.ts`, which has no default and must be set — see **Database** below.
 - **`docs/` is excluded from `tsconfig.json`.** `docs/tech-stack-code/` holds copies of source
   files as documentation, and their relative imports do not resolve from where they sit —
   six errors that made `npm run typecheck` permanently red, which is the same as having no
@@ -49,7 +55,7 @@ Citrus Writing** and **The Citrus Writing overhaul** below, shipped across the s
 | Production build | `npm run build` (runs `prisma generate` first) |
 | New migration | `npm run db:migrate -- --name <name>` (the `postdb:migrate` hook regenerates the client, because Prisma 7's `migrate dev` does not; does not seed) |
 | Seed demo novel | `npm run db:seed` — creates the demo **account** (`demo@citruswriting.app` / `lantern-tide-demo`, on Serial) and replaces only its "The Lantern Tide"; keeps other novels and existing sessions. Override with `SEED_EMAIL`/`SEED_PASSWORD`/`SEED_PEN_NAME`. Set `SEED_FRESH_SESSIONS=1` to also replace that account's writing history with the demo's five-day streak, on both `WritingSession` and `NovelDay` |
-| Reset database | `npm run db:reset` (drops everything with `--force`, migrates, regenerates, seeds). Prisma 7's `migrate reset` has no `--skip-seed`. Stop the dev server first: on Windows it holds `dev.db` open |
+| Reset database | `npm run db:reset` (drops everything with `--force`, migrates, regenerates, seeds). Prisma 7's `migrate reset` has no `--skip-seed` |
 | Prisma Studio | `npm run db:studio` |
 | DB smoke test | `npm run db:smoke` |
 | Export engine checks | `npm run export:check` (runs a fixture through HTML and Markdown and asserts the output is clean; no dev server needed) |
@@ -58,6 +64,41 @@ Citrus Writing** and **The Citrus Writing overhaul** below, shipped across the s
 | Inspect the database | `npm run db:inspect` (read-only: novels, chapter word counts and previews, writing sessions) |
 | DB write timing | `npm run db:timing` (times small writes while the dev server runs; use it if actions feel slow) |
 | In-app preview | `.claude/launch.json` runs `scripts/dev-server.mjs` through an absolute `node.exe` path, because the Claude app's shell may have no `node` on PATH |
+
+## Database
+
+Postgres, hosted on Supabase (project `oqvvqfxtemltxoikldpg`, org "Pith & Ink"), reached at
+runtime through `@prisma/adapter-pg`. This replaced the original `node:sqlite`-backed SQLite
+file on 2026-09-10, when the app first needed a database that survives a Railway deploy — a
+relative SQLite file has nowhere persistent to live on Railway's container filesystem without
+a Volume, and nothing in this repo ever ran a migration against one in production anyway.
+
+- **`DATABASE_URL` has no default and must be set** (`src/lib/db/database-url.ts`) — there is
+  no sensible fallback for a Postgres connection string the way `file:./prisma/dev.db` once
+  was. `requireDatabaseUrl()` throws a clear message where a real connection is actually
+  needed (`src/lib/db.ts`, every `npm run db:*` script); the bare `DATABASE_URL` export stays
+  an empty string when unset so `prisma generate` — which never opens a connection — keeps
+  working with no `.env` at all, exactly as it did before.
+- **Local dev and production point at the same Supabase instance**, deliberately: this app's
+  Prisma schema has one `datasource` provider for the whole codebase, so "SQLite locally,
+  Postgres in production" was never on the table without maintaining two schemas. Running
+  Postgres locally sounds like it should be a hassle; it isn't, because nothing runs
+  *locally* — `pg` is a pure-JS TCP client (no native binary, no ARM64 problem), so "local dev"
+  just means pointing the same `DATABASE_URL` at the hosted instance. Split into separate
+  dev/prod Supabase projects later if that starts to matter.
+- **`src/lib/db/node-sqlite-adapter.ts` is unused but not deleted.** It is a real, carefully
+  built adapter (ports Prisma's own better-sqlite3 adapter onto `node:sqlite` column-type and
+  error mapping included) and the ARM64 workaround this project is named after in three other
+  places in this file; removing it was a judgment call left to the writer rather than made
+  silently in the same pass that stopped calling it.
+- **Row Level Security is off on every table**, and that is correct for how this app reaches
+  Postgres — through Prisma over a direct connection with the database password, never through
+  Supabase's PostgREST/anon-key API. RLS only gates that second path. Supabase's own advisor
+  still reports it (it cannot tell which access path an app uses), which is worth knowing
+  before reflexively enabling it: RLS with no policies written blocks every query outright.
+- The migration history restarted at `20260910000000_init_postgres` — the SQLite-era
+  migrations (`prisma/migrations-sqlite-archive/`) do not replay against Postgres and are kept
+  only as a record of schema history, not as part of the active migration chain.
 
 ## Data model rules
 

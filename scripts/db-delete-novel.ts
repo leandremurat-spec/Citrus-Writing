@@ -3,11 +3,18 @@
  * There is no delete-novel button in the UI yet, so this is the maintenance path.
  * Run: npm run db:delete-novel -- "Exact Title"
  */
-import { PrismaClient } from "../src/generated/prisma/client";
-import { DATABASE_URL } from "../src/lib/db/database-url";
-import { PrismaNodeSqlite } from "../src/lib/db/node-sqlite-adapter";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-const prisma = new PrismaClient({ adapter: new PrismaNodeSqlite({ url: DATABASE_URL }) });
+import { PrismaClient } from "../src/generated/prisma/client";
+import { requireDatabaseUrl } from "../src/lib/db/database-url";
+
+try {
+  process.loadEnvFile(".env");
+} catch {
+  // No .env at all — requireDatabaseUrl() below will report it clearly.
+}
+
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: requireDatabaseUrl() }) });
 
 async function main() {
   const title = process.argv[2];

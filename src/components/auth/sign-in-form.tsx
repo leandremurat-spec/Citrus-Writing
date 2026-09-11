@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { signIn } from "@/lib/actions/auth";
-import { AuthCard, Divider, Field, FormError, ProviderButtons, type Provider } from "./auth-parts";
+import { attempt, AuthCard, Divider, Field, FormError, ProviderButtons, type Provider } from "./auth-parts";
 import { Button } from "@/components/ui/button";
 // Aliased: `signIn` is already taken in this file by the server action above.
 import { signIn as copy } from "@/content/site-copy";
@@ -46,7 +46,7 @@ export function SignInForm({
     setPending(true);
     setError(null);
 
-    const response = await signIn({ email, password });
+    const response = await attempt(() => signIn({ email, password }));
     if (!response.ok) {
       setError(response.error);
       setPending(false);

@@ -747,6 +747,7 @@ export type NovelCreateOrConnectWithoutUserInput = {
 
 export type NovelCreateManyUserInputEnvelope = {
   data: Prisma.NovelCreateManyUserInput | Prisma.NovelCreateManyUserInput[]
+  skipDuplicates?: boolean
 }
 
 export type NovelUpsertWithWhereUniqueWithoutUserInput = {
@@ -2314,6 +2315,7 @@ export type NovelCreateManyArgs<ExtArgs extends runtime.Types.Extensions.Interna
    * The data used to create many Novels.
    */
   data: Prisma.NovelCreateManyInput | Prisma.NovelCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -2332,6 +2334,7 @@ export type NovelCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extension
    * The data used to create many Novels.
    */
   data: Prisma.NovelCreateManyInput | Prisma.NovelCreateManyInput[]
+  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

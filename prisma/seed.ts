@@ -6,14 +6,21 @@
  */
 import { format, subDays } from "date-fns";
 
+import { PrismaPg } from "@prisma/adapter-pg";
+
 import { PrismaClient } from "../src/generated/prisma/client";
-import { DATABASE_URL } from "../src/lib/db/database-url";
-import { PrismaNodeSqlite } from "../src/lib/db/node-sqlite-adapter";
+import { requireDatabaseUrl } from "../src/lib/db/database-url";
 import { hashPassword } from "../src/lib/auth/password";
 import { mentionsInDoc } from "../src/lib/editor/mentions";
 import { countWordsInDoc } from "../src/lib/editor/word-count";
 
-const prisma = new PrismaClient({ adapter: new PrismaNodeSqlite({ url: DATABASE_URL }) });
+try {
+  process.loadEnvFile(".env");
+} catch {
+  // No .env at all — requireDatabaseUrl() below will report it clearly.
+}
+
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: requireDatabaseUrl() }) });
 
 const DEMO_TITLE = "The Lantern Tide";
 

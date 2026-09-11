@@ -789,6 +789,7 @@ export type ChapterCreateOrConnectWithoutNovelInput = {
 
 export type ChapterCreateManyNovelInputEnvelope = {
   data: Prisma.ChapterCreateManyNovelInput | Prisma.ChapterCreateManyNovelInput[]
+  skipDuplicates?: boolean
 }
 
 export type ChapterUpsertWithWhereUniqueWithoutNovelInput = {
@@ -870,6 +871,7 @@ export type ChapterCreateOrConnectWithoutVolumeInput = {
 
 export type ChapterCreateManyVolumeInputEnvelope = {
   data: Prisma.ChapterCreateManyVolumeInput | Prisma.ChapterCreateManyVolumeInput[]
+  skipDuplicates?: boolean
 }
 
 export type ChapterUpsertWithWhereUniqueWithoutVolumeInput = {
@@ -931,6 +933,7 @@ export type ChapterCreateOrConnectWithoutArcInput = {
 
 export type ChapterCreateManyArcInputEnvelope = {
   data: Prisma.ChapterCreateManyArcInput | Prisma.ChapterCreateManyArcInput[]
+  skipDuplicates?: boolean
 }
 
 export type ChapterUpsertWithWhereUniqueWithoutArcInput = {
@@ -2177,6 +2180,7 @@ export type ChapterCreateManyArgs<ExtArgs extends runtime.Types.Extensions.Inter
    * The data used to create many Chapters.
    */
   data: Prisma.ChapterCreateManyInput | Prisma.ChapterCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -2195,6 +2199,7 @@ export type ChapterCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensi
    * The data used to create many Chapters.
    */
   data: Prisma.ChapterCreateManyInput | Prisma.ChapterCreateManyInput[]
+  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

@@ -10,6 +10,7 @@ import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-rules";
 import { signUp as copy } from "@/content/site-copy";
 import { Button } from "@/components/ui/button";
 import {
+  attempt,
   AuthCard,
   CheckRow,
   Divider,
@@ -35,7 +36,7 @@ export function SignUpForm({ providers, next }: { providers: Provider[]; next: s
     setPending(true);
     setError(null);
 
-    const response = await signUp({ penName, email, password, notifyStale });
+    const response = await attempt(() => signUp({ penName, email, password, notifyStale }));
     if (!response.ok) {
       setError(response.error);
       setPending(false);

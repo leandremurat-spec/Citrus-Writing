@@ -586,6 +586,7 @@ export type CodexTieCreateOrConnectWithoutNovelInput = {
 
 export type CodexTieCreateManyNovelInputEnvelope = {
   data: Prisma.CodexTieCreateManyNovelInput | Prisma.CodexTieCreateManyNovelInput[]
+  skipDuplicates?: boolean
 }
 
 export type CodexTieUpsertWithWhereUniqueWithoutNovelInput = {
@@ -645,6 +646,7 @@ export type CodexTieCreateOrConnectWithoutFromEntryInput = {
 
 export type CodexTieCreateManyFromEntryInputEnvelope = {
   data: Prisma.CodexTieCreateManyFromEntryInput | Prisma.CodexTieCreateManyFromEntryInput[]
+  skipDuplicates?: boolean
 }
 
 export type CodexTieCreateWithoutToEntryInput = {
@@ -674,6 +676,7 @@ export type CodexTieCreateOrConnectWithoutToEntryInput = {
 
 export type CodexTieCreateManyToEntryInputEnvelope = {
   data: Prisma.CodexTieCreateManyToEntryInput | Prisma.CodexTieCreateManyToEntryInput[]
+  skipDuplicates?: boolean
 }
 
 export type CodexTieUpsertWithWhereUniqueWithoutFromEntryInput = {
@@ -1590,6 +1593,7 @@ export type CodexTieCreateManyArgs<ExtArgs extends runtime.Types.Extensions.Inte
    * The data used to create many CodexTies.
    */
   data: Prisma.CodexTieCreateManyInput | Prisma.CodexTieCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1608,6 +1612,7 @@ export type CodexTieCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extens
    * The data used to create many CodexTies.
    */
   data: Prisma.CodexTieCreateManyInput | Prisma.CodexTieCreateManyInput[]
+  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

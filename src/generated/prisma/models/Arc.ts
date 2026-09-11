@@ -546,6 +546,7 @@ export type ArcCreateOrConnectWithoutNovelInput = {
 
 export type ArcCreateManyNovelInputEnvelope = {
   data: Prisma.ArcCreateManyNovelInput | Prisma.ArcCreateManyNovelInput[]
+  skipDuplicates?: boolean
 }
 
 export type ArcUpsertWithWhereUniqueWithoutNovelInput = {
@@ -604,6 +605,7 @@ export type ArcCreateOrConnectWithoutVolumeInput = {
 
 export type ArcCreateManyVolumeInputEnvelope = {
   data: Prisma.ArcCreateManyVolumeInput | Prisma.ArcCreateManyVolumeInput[]
+  skipDuplicates?: boolean
 }
 
 export type ArcUpsertWithWhereUniqueWithoutVolumeInput = {
@@ -1531,6 +1533,7 @@ export type ArcCreateManyArgs<ExtArgs extends runtime.Types.Extensions.InternalA
    * The data used to create many Arcs.
    */
   data: Prisma.ArcCreateManyInput | Prisma.ArcCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1549,6 +1552,7 @@ export type ArcCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.
    * The data used to create many Arcs.
    */
   data: Prisma.ArcCreateManyInput | Prisma.ArcCreateManyInput[]
+  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

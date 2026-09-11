@@ -602,6 +602,7 @@ export type CodexEntryCreateOrConnectWithoutNovelInput = {
 
 export type CodexEntryCreateManyNovelInputEnvelope = {
   data: Prisma.CodexEntryCreateManyNovelInput | Prisma.CodexEntryCreateManyNovelInput[]
+  skipDuplicates?: boolean
 }
 
 export type CodexEntryUpsertWithWhereUniqueWithoutNovelInput = {
@@ -1768,6 +1769,7 @@ export type CodexEntryCreateManyArgs<ExtArgs extends runtime.Types.Extensions.In
    * The data used to create many CodexEntries.
    */
   data: Prisma.CodexEntryCreateManyInput | Prisma.CodexEntryCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1786,6 +1788,7 @@ export type CodexEntryCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Exte
    * The data used to create many CodexEntries.
    */
   data: Prisma.CodexEntryCreateManyInput | Prisma.CodexEntryCreateManyInput[]
+  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

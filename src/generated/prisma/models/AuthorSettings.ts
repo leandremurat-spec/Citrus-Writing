@@ -1200,6 +1200,7 @@ export type AuthorSettingsCreateManyArgs<ExtArgs extends runtime.Types.Extension
    * The data used to create many AuthorSettings.
    */
   data: Prisma.AuthorSettingsCreateManyInput | Prisma.AuthorSettingsCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1218,6 +1219,7 @@ export type AuthorSettingsCreateManyAndReturnArgs<ExtArgs extends runtime.Types.
    * The data used to create many AuthorSettings.
    */
   data: Prisma.AuthorSettingsCreateManyInput | Prisma.AuthorSettingsCreateManyInput[]
+  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

@@ -450,6 +450,7 @@ export type ChapterCodexCreateOrConnectWithoutChapterInput = {
 
 export type ChapterCodexCreateManyChapterInputEnvelope = {
   data: Prisma.ChapterCodexCreateManyChapterInput | Prisma.ChapterCodexCreateManyChapterInput[]
+  skipDuplicates?: boolean
 }
 
 export type ChapterCodexUpsertWithWhereUniqueWithoutChapterInput = {
@@ -497,6 +498,7 @@ export type ChapterCodexCreateOrConnectWithoutCodexEntryInput = {
 
 export type ChapterCodexCreateManyCodexEntryInputEnvelope = {
   data: Prisma.ChapterCodexCreateManyCodexEntryInput | Prisma.ChapterCodexCreateManyCodexEntryInput[]
+  skipDuplicates?: boolean
 }
 
 export type ChapterCodexUpsertWithWhereUniqueWithoutCodexEntryInput = {
@@ -1287,6 +1289,7 @@ export type ChapterCodexCreateManyArgs<ExtArgs extends runtime.Types.Extensions.
    * The data used to create many ChapterCodices.
    */
   data: Prisma.ChapterCodexCreateManyInput | Prisma.ChapterCodexCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1305,6 +1308,7 @@ export type ChapterCodexCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Ex
    * The data used to create many ChapterCodices.
    */
   data: Prisma.ChapterCodexCreateManyInput | Prisma.ChapterCodexCreateManyInput[]
+  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

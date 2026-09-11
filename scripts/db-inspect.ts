@@ -1,10 +1,17 @@
 /** Read-only look at novels, chapters, and writing sessions. Run: npm run db:inspect */
+import { PrismaPg } from "@prisma/adapter-pg";
+
 import { PrismaClient } from "../src/generated/prisma/client";
-import { DATABASE_URL } from "../src/lib/db/database-url";
-import { PrismaNodeSqlite } from "../src/lib/db/node-sqlite-adapter";
+import { requireDatabaseUrl } from "../src/lib/db/database-url";
 import { docToPlainText, parseDoc } from "../src/lib/editor/word-count";
 
-const prisma = new PrismaClient({ adapter: new PrismaNodeSqlite({ url: DATABASE_URL }) });
+try {
+  process.loadEnvFile(".env");
+} catch {
+  // No .env at all — requireDatabaseUrl() below will report it clearly.
+}
+
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: requireDatabaseUrl() }) });
 
 async function main() {
   const novels = await prisma.novel.findMany({

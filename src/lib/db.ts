@@ -1,17 +1,18 @@
 import "server-only";
 
+import { PrismaPg } from "@prisma/adapter-pg";
+
 import { PrismaClient } from "@/generated/prisma/client";
-import { DATABASE_URL } from "@/lib/db/database-url";
-import { PrismaNodeSqlite } from "@/lib/db/node-sqlite-adapter";
+import { requireDatabaseUrl } from "@/lib/db/database-url";
 
 /**
  * App-wide Prisma client.
  *
- * In development the instance is cached on `globalThis` so hot reloads reuse one SQLite
- * connection. The cache is keyed by the generated `PrismaClient` constructor: after
- * `prisma generate` rewrites `src/generated/prisma`, the module is re-evaluated with a new
- * constructor, the stale client (which knows nothing about new columns) is dropped, and a
- * fresh one is built. No dev-server restart needed after a migration.
+ * In development the instance is cached on `globalThis` so hot reloads reuse one connection
+ * pool. The cache is keyed by the generated `PrismaClient` constructor: after `prisma generate`
+ * rewrites `src/generated/prisma`, the module is re-evaluated with a new constructor, the stale
+ * client (which knows nothing about new columns) is dropped, and a fresh one is built. No
+ * dev-server restart needed after a migration.
  */
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -19,7 +20,7 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient() {
-  const adapter = new PrismaNodeSqlite({ url: DATABASE_URL });
+  const adapter = new PrismaPg({ connectionString: requireDatabaseUrl() });
   return new PrismaClient({ adapter });
 }
 

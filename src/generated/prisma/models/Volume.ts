@@ -503,6 +503,7 @@ export type VolumeCreateOrConnectWithoutNovelInput = {
 
 export type VolumeCreateManyNovelInputEnvelope = {
   data: Prisma.VolumeCreateManyNovelInput | Prisma.VolumeCreateManyNovelInput[]
+  skipDuplicates?: boolean
 }
 
 export type VolumeUpsertWithWhereUniqueWithoutNovelInput = {
@@ -1457,6 +1458,7 @@ export type VolumeCreateManyArgs<ExtArgs extends runtime.Types.Extensions.Intern
    * The data used to create many Volumes.
    */
   data: Prisma.VolumeCreateManyInput | Prisma.VolumeCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1475,6 +1477,7 @@ export type VolumeCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensio
    * The data used to create many Volumes.
    */
   data: Prisma.VolumeCreateManyInput | Prisma.VolumeCreateManyInput[]
+  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

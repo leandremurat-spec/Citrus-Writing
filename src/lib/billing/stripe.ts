@@ -126,7 +126,11 @@ export async function createCheckoutSession(options: {
     automatic_tax: { enabled: false },
     payment_method_collection: "always",
     submit_type: "auto",
-    tax_id_collection: { enabled: true, required: "never" },
+    // `required` has no effect under `ui_mode: "form"` and Stripe rejects the request outright
+    // if it is present — confirmed against a live test-mode call. `enabled: true` alone is the
+    // most that Studio's setting can mean here; whether the field is required is not
+    // configurable for the embedded form.
+    tax_id_collection: { enabled: true },
     saved_payment_method_options: { payment_method_save: "enabled" },
     integration_identifier: "custom_embedded_web_0001",
 

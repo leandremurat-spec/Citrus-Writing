@@ -59,9 +59,9 @@ console.log(`${BOLD}Citrus Writing — configuration${RESET}`);
 block(
   "Database",
   has("DATABASE_URL"),
-  `SQLite at ${process.env.DATABASE_URL}`,
-  "DATABASE_URL is not set — the app falls back to file:./prisma/dev.db",
-  ["Nothing to do unless you want the file somewhere else."],
+  `Postgres at ${shape("DATABASE_URL")}`,
+  "DATABASE_URL is not set — there is no local fallback, so nothing that touches the database will work.",
+  ["Set DATABASE_URL to a Postgres connection string (see .env.example)."],
 );
 
 // ------------------------------------------------------------------ payments

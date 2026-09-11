@@ -8,7 +8,7 @@ import { Mail } from "lucide-react";
 import { completePasswordReset, requestPasswordReset } from "@/lib/actions/auth";
 import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-rules";
 import { Button } from "@/components/ui/button";
-import { AuthCard, Field, FormError, PasswordMeter } from "./auth-parts";
+import { attempt, AuthCard, Field, FormError, PasswordMeter } from "./auth-parts";
 
 /**
  * "Forgotten it?" and the screen it becomes.
@@ -30,7 +30,7 @@ export function ForgotForm() {
     setPending(true);
     setError(null);
 
-    const response = await requestPasswordReset({ email, origin: window.location.origin });
+    const response = await attempt(() => requestPasswordReset({ email, origin: window.location.origin }));
     setPending(false);
     if (!response.ok) {
       setError(response.error);
@@ -147,7 +147,7 @@ export function ResetForm({ token }: { token: string }) {
           setPending(true);
           setError(null);
           void (async () => {
-            const response = await completePasswordReset({ token, newPassword: password });
+            const response = await attempt(() => completePasswordReset({ token, newPassword: password }));
             if (!response.ok) {
               setError(response.error);
               setPending(false);

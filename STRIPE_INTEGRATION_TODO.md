@@ -1,7 +1,10 @@
 # Stripe integration — remaining steps
 
-The embedded Checkout form is wired up end to end. What is left is pasting three keys and
-running one command; everything else below is reference.
+The embedded Checkout form is wired up end to end. All three keys are set in `.env` and the
+product/prices exist in the connected test account (see **Not placeholders — already real**
+below) — a checkout session now creates successfully for both intervals. What is left is
+running `stripe listen` (below) while developing, so the webhook actually grants the plan;
+everything else below is reference.
 
 This app already had a working **hosted** Checkout integration (a redirect to a Stripe-hosted
 page). Checkout Studio configured an **embedded** form, so the session now returns a
@@ -36,7 +39,7 @@ codebase, so they were **kept** rather than overwritten:
 | Parameter | Value here | Why it is already correct |
 | --- | --- | --- |
 | `mode` | `"subscription"` | The Serial plan is recurring (monthly and yearly prices), so `subscription` is the correct mode — not `payment`. |
-| `line_items[].price` | `process.env.STRIPE_PRICE_SERIAL_MONTHLY` / `_YEARLY` | Both are set in `.env` to real test-mode price IDs in the "Ko-fi" Stripe account: `price_1UEB61I6pGdxTDYia3zGlX9F` ($9/mo) and `price_1UEB6II6pGdxTDYiIy8Jt6G3` ($84/yr), on product `prod_VEeOok1SAChI6U`. |
+| `line_items[].price` | `process.env.STRIPE_PRICE_SERIAL_MONTHLY` / `_YEARLY` | Set in `.env` to real test-mode price IDs on product `prod_VEhpEX9RjSc5QT` ("Citrus Writing — Serial"), in the same Stripe test account `STRIPE_SECRET_KEY` points at: `$9/mo` and `$84/yr` ($7/mo equivalent), matching `PLANS.SERIAL` in `src/lib/billing/plans.ts`. The IDs originally left here belonged to a *different* Stripe account ("Ko-fi") and failed every call with `resource_missing` — caught 2026-09-10 when the embedded form's first live test threw `Unhandled paymentForm Element loaderror` downstream of it. |
 
 ---
 
@@ -57,7 +60,7 @@ is what ties the call back to that configuration.
 | `automatic_tax` | `{ enabled: false }` |
 | `payment_method_collection` | `always` |
 | `submit_type` | `auto` |
-| `tax_id_collection` | `{ enabled: true, required: "never" }` |
+| `tax_id_collection` | `{ enabled: true }` |
 | `saved_payment_method_options` | `{ payment_method_save: "enabled" }` |
 | `integration_identifier` | `custom_embedded_web_0001` |
 
@@ -182,10 +185,14 @@ If the payment goes through and the plan does not change, the webhook is the thi
   calls the REST API directly — so there was no version to read and `form` was used, which is
   correct for the pinned API version above. If you ever add the `stripe` package, this pairing
   is the thing to re-check.
-- **`submit_type: "auto"` on a subscription is untested here.** Stripe has historically
-  restricted `submit_type` to `payment` mode. It is set as Studio specified, but no live call
-  has been made (no secret key yet). If the first real checkout returns an error naming
-  `submit_type`, remove it in Studio — `auto` is the default anyway.
+- **`submit_type: "auto"` on a subscription works.** Confirmed against a live test-mode
+  session creation on 2026-09-10 — no error naming `submit_type`, so it stays as Studio
+  specified.
+- **`tax_id_collection.required` is not supported under `ui_mode: "form"`.** The same live
+  call rejected `{ enabled: true, required: "never" }` outright
+  (`invalid_request_error`, param `tax_id_collection.required`). `src/lib/billing/stripe.ts`
+  now sends `{ enabled: true }` only — whether the field is required is not configurable for
+  the embedded form.
 - **The appearance asks for the Lora typeface**, but a font has to be loaded *into* the Stripe
   iframe to be used there, via a `fonts` option that the Studio snippet does not include. As
   it stands the form will fall back to a system face. If Lora matters, add

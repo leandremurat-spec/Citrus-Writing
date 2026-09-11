@@ -452,6 +452,7 @@ export type ChapterSnapshotCreateOrConnectWithoutChapterInput = {
 
 export type ChapterSnapshotCreateManyChapterInputEnvelope = {
   data: Prisma.ChapterSnapshotCreateManyChapterInput | Prisma.ChapterSnapshotCreateManyChapterInput[]
+  skipDuplicates?: boolean
 }
 
 export type ChapterSnapshotUpsertWithWhereUniqueWithoutChapterInput = {
@@ -1248,6 +1249,7 @@ export type ChapterSnapshotCreateManyArgs<ExtArgs extends runtime.Types.Extensio
    * The data used to create many ChapterSnapshots.
    */
   data: Prisma.ChapterSnapshotCreateManyInput | Prisma.ChapterSnapshotCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1266,6 +1268,7 @@ export type ChapterSnapshotCreateManyAndReturnArgs<ExtArgs extends runtime.Types
    * The data used to create many ChapterSnapshots.
    */
   data: Prisma.ChapterSnapshotCreateManyInput | Prisma.ChapterSnapshotCreateManyInput[]
+  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

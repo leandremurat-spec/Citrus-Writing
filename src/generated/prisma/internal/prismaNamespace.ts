@@ -1571,6 +1571,9 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
  */
 
 export const TransactionIsolationLevel = runtime.makeStrictEnum({
+  ReadUncommitted: 'ReadUncommitted',
+  ReadCommitted: 'ReadCommitted',
+  RepeatableRead: 'RepeatableRead',
   Serializable: 'Serializable'
 } as const)
 
@@ -1794,6 +1797,14 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
+export const QueryMode = {
+  default: 'default',
+  insensitive: 'insensitive'
+} as const
+
+export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
+
+
 export const NullsOrder = {
   first: 'first',
   last: 'last'
@@ -1816,6 +1827,13 @@ export type StringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 
 
 
 /**
+ * Reference to a field of type 'String[]'
+ */
+export type ListStringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String[]'>
+    
+
+
+/**
  * Reference to a field of type 'Boolean'
  */
 export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
@@ -1830,9 +1848,23 @@ export type EnumPlanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel
 
 
 /**
+ * Reference to a field of type 'Plan[]'
+ */
+export type ListEnumPlanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Plan[]'>
+    
+
+
+/**
  * Reference to a field of type 'PlanStatus'
  */
 export type EnumPlanStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PlanStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'PlanStatus[]'
+ */
+export type ListEnumPlanStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PlanStatus[]'>
     
 
 
@@ -1844,9 +1876,23 @@ export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel
 
 
 /**
+ * Reference to a field of type 'DateTime[]'
+ */
+export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
+    
+
+
+/**
  * Reference to a field of type 'CadenceFrequency'
  */
 export type EnumCadenceFrequencyFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CadenceFrequency'>
+    
+
+
+/**
+ * Reference to a field of type 'CadenceFrequency[]'
+ */
+export type ListEnumCadenceFrequencyFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CadenceFrequency[]'>
     
 
 
@@ -1858,9 +1904,23 @@ export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'In
 
 
 /**
+ * Reference to a field of type 'Int[]'
+ */
+export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
+
+
+/**
  * Reference to a field of type 'ChapterStatus'
  */
 export type EnumChapterStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ChapterStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'ChapterStatus[]'
+ */
+export type ListEnumChapterStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ChapterStatus[]'>
     
 
 
@@ -1872,9 +1932,23 @@ export type EnumCodexCategoryFieldRefInput<$PrismaModel> = FieldRefInputType<$Pr
 
 
 /**
+ * Reference to a field of type 'CodexCategory[]'
+ */
+export type ListEnumCodexCategoryFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CodexCategory[]'>
+    
+
+
+/**
  * Reference to a field of type 'Float'
  */
 export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
+    
+
+
+/**
+ * Reference to a field of type 'Float[]'
+ */
+export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
     
 
 /**

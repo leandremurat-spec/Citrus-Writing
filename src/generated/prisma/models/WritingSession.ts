@@ -568,6 +568,7 @@ export type WritingSessionCreateOrConnectWithoutUserInput = {
 
 export type WritingSessionCreateManyUserInputEnvelope = {
   data: Prisma.WritingSessionCreateManyUserInput | Prisma.WritingSessionCreateManyUserInput[]
+  skipDuplicates?: boolean
 }
 
 export type WritingSessionUpsertWithWhereUniqueWithoutUserInput = {
@@ -1417,6 +1418,7 @@ export type WritingSessionCreateManyArgs<ExtArgs extends runtime.Types.Extension
    * The data used to create many WritingSessions.
    */
   data: Prisma.WritingSessionCreateManyInput | Prisma.WritingSessionCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1435,6 +1437,7 @@ export type WritingSessionCreateManyAndReturnArgs<ExtArgs extends runtime.Types.
    * The data used to create many WritingSessions.
    */
   data: Prisma.WritingSessionCreateManyInput | Prisma.WritingSessionCreateManyInput[]
+  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

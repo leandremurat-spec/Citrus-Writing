@@ -1,12 +1,19 @@
 /**
- * End-to-end check of the Prisma client + node:sqlite adapter against the seeded database.
+ * End-to-end check of the Prisma client + Postgres adapter against the seeded database.
  * Run: node node_modules/tsx/dist/cli.mjs scripts/db-smoke.ts
  */
-import { PrismaClient } from "../src/generated/prisma/client";
-import { DATABASE_URL } from "../src/lib/db/database-url";
-import { PrismaNodeSqlite } from "../src/lib/db/node-sqlite-adapter";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-const prisma = new PrismaClient({ adapter: new PrismaNodeSqlite({ url: DATABASE_URL }) });
+import { PrismaClient } from "../src/generated/prisma/client";
+import { requireDatabaseUrl } from "../src/lib/db/database-url";
+
+try {
+  process.loadEnvFile(".env");
+} catch {
+  // No .env at all — requireDatabaseUrl() below will report it clearly.
+}
+
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: requireDatabaseUrl() }) });
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`SMOKE FAIL: ${message}`);

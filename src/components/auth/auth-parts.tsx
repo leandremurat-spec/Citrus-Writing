@@ -235,3 +235,35 @@ export function FormError({ message }: { message: string | null }) {
     </p>
   );
 }
+
+/**
+ * Runs a server action so that a *rejection* arrives as an ordinary failed result.
+ *
+ * Every form on these three screens is a `pending` flag wrapped around an `await`, and the
+ * line that clears the flag sits after the await. So an action that **throws** — rather than
+ * returning `{ ok: false }` the way all of ours are written to — skips it, and the writer is
+ * left with a submit button that is disabled, still reading "Signing in…", saying nothing, and
+ * unable to be pressed again short of reloading the page. It looks exactly like a sign-in that
+ * loads forever, because that is what it is.
+ *
+ * That failure mode belongs to production specifically: Next masks server errors on the client,
+ * so there is no message to fall back on, and the things that make an action throw at all —
+ * an unreachable database, a proxy that will not pass the request through — are the things
+ * that only happen once the app is deployed. A form has to survive it and say so.
+ *
+ * The real error still goes to the browser console, which is where the next person debugging
+ * this will look; what the writer gets is a sentence and a button they can press again.
+ */
+export async function attempt<T extends { ok: boolean }>(
+  run: () => Promise<T>,
+): Promise<T | { ok: false; error: string }> {
+  try {
+    return await run();
+  } catch (cause) {
+    console.error("[citrus] a sign-in action did not complete", cause);
+    return {
+      ok: false,
+      error: "Something went wrong at our end, so you are not signed in. Try again in a moment.",
+    };
+  }
+}

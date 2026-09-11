@@ -519,6 +519,7 @@ export type NovelDayCreateOrConnectWithoutNovelInput = {
 
 export type NovelDayCreateManyNovelInputEnvelope = {
   data: Prisma.NovelDayCreateManyNovelInput | Prisma.NovelDayCreateManyNovelInput[]
+  skipDuplicates?: boolean
 }
 
 export type NovelDayUpsertWithWhereUniqueWithoutNovelInput = {
@@ -1337,6 +1338,7 @@ export type NovelDayCreateManyArgs<ExtArgs extends runtime.Types.Extensions.Inte
    * The data used to create many NovelDays.
    */
   data: Prisma.NovelDayCreateManyInput | Prisma.NovelDayCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1355,6 +1357,7 @@ export type NovelDayCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extens
    * The data used to create many NovelDays.
    */
   data: Prisma.NovelDayCreateManyInput | Prisma.NovelDayCreateManyInput[]
+  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */
