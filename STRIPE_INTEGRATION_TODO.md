@@ -252,6 +252,78 @@ Worth exercising specifically, because they are this app's own rules rather than
 - Cancel, then check that a downgraded writer keeps every serial they already have and simply
   cannot create a new one.
 
+## The launch discount
+
+A 50% welcome code on the annual plan: **$84 → $42 for the first year**, then $84 a year after
+that. New customers only, redeemable for six months.
+
+### What had to be built
+
+The embedded form is not hosted Checkout — it renders payment fields and nothing else, so there
+is no promotion-code box to switch on. Verified against the live SDK rather than assumed:
+`loadActions()` returns `applyPromotionCode`, `removePromotionCode` and `getSession`, so the
+mechanism exists but the **UI is ours to build**.
+
+| Change | Where |
+|---|---|
+| `allow_promotion_codes: true` on the session | [lib/billing/stripe.ts](src/lib/billing/stripe.ts) — without it `applyPromotionCode` is refused |
+| Code field, Apply/Remove, error surface | [checkout-form.tsx](src/components/billing/checkout-form.tsx) |
+| The discount disclosed in the pre-purchase block | [checkout-acknowledgement.tsx](src/components/billing/checkout-acknowledgement.tsx) |
+
+Proven end to end in test mode before the UI was written:
+
+```
+before →  subtotal $84.00   discount  $0.00
+apply  →  applyPromotionCode("WELCOME50") → type: "success"
+after  →  subtotal $84.00   discount $42.00
+```
+
+### The disclosure is not optional
+
+The acknowledgement block stated "**$84.00 every year**". With a code applied that becomes a
+false statement at the moment of sale — the writer is charged $42. An introductory price that
+converts to a higher recurring one is exactly the case US auto-renewal statutes (California's
+ARL most explicitly) require to be disclosed clearly and conspicuously *before* the order, and
+the UK/EU pre-contract rules ask the same of the total price.
+
+So with a code applied the block now reads "**$42.00 for your first year**, then $84.00 every
+year", and the renewal row adds that the discount covers the first year only. This is why the
+promotion field and the disclosure had to ship together rather than one then the other.
+
+### The Stripe objects
+
+**Test mode only** — live mode is a separate ledger and needs its own copies.
+
+| | |
+|---|---|
+| Coupon | `fDk6D8Ol` — 50% off, `duration: once`, restricted to the Serial product |
+| Promotion code | `WELCOME50` — `first_time_transaction: true`, expires in ~6 months |
+
+`duration: "once"` means the first *invoice*, which on an annual plan is the first year. On the
+monthly plan the same coupon would discount one month, which is why it is restricted to the
+product rather than left open.
+
+**The API shape has changed and the docs you find first will be wrong.** On this account's
+version (`2026-08-26.dahlia`) `POST /v1/promotion_codes` rejects the long-standing `coupon`
+parameter outright. It now takes:
+
+```
+promotion[type]=coupon
+promotion[coupon]=<coupon id>
+```
+
+Also worth knowing: a promotion code's `expires_at` may not be later than its coupon's
+`redeem_by`, and promotion codes cannot be deleted — only deactivated with `active=false`.
+
+### Before the code goes out
+
+- [ ] Recreate the coupon and `WELCOME50` in **live** mode.
+- [ ] Decide the real redemption window. Six months is what the test objects carry; the coupon's
+      `redeem_by` and the code's `expires_at` must both be set, and the coupon's must not be
+      earlier.
+- [ ] If the code is advertised with an end date, honour that date — a stated expiry on a
+      promotion is a representation to the consumer, and Quebec's CPA is strict about it.
+
 ## Going live
 
 Everything below is configuration and account setup — **no further code changes are required**

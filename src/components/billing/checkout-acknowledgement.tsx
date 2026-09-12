@@ -32,19 +32,36 @@ import { CheckRow } from "@/components/auth/auth-parts";
  *
  * `CheckoutForm` refuses to confirm the payment until it is ticked. That refusal is the control;
  * the box being visible is merely the courtesy.
+ *
+ * ── Discounts ─────────────────────────────────────────────────────────────────
+ *
+ * `discountOffCents` is what a redeemed promotion code takes off the *first* charge, and it has
+ * to be said here rather than only on the payment form. An introductory price that converts to
+ * a higher recurring one is precisely the case US auto-renewal statutes — California's ARL
+ * most explicitly — require to be disclosed clearly and conspicuously before the order, and the
+ * UK/EU pre-contract rules ask the same of the total price. A block that keeps reading
+ * "$84.00 every year" while the writer is about to be charged $42.00 is not a smaller problem
+ * than saying nothing; it is a false statement at the moment of sale.
  */
 export function CheckoutAcknowledgement({
   interval,
   checked,
   onChange,
+  discountOffCents = 0,
 }: {
   interval: BillingInterval;
   checked: boolean;
   onChange: (checked: boolean) => void;
+  /** Taken off the first charge only. Zero when no code is applied. */
+  discountOffCents?: number;
 }) {
-  const total = formatPrice(priceCents("SERIAL", interval));
+  const fullCents = priceCents("SERIAL", interval);
+  const total = formatPrice(fullCents);
   const period = interval === "yearly" ? "year" : "month";
   const perMonth = formatPrice(perMonthCents("SERIAL", interval));
+
+  const discounted = discountOffCents > 0;
+  const firstTotal = formatPrice(Math.max(fullCents - discountOffCents, 0));
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -52,17 +69,30 @@ export function CheckoutAcknowledgement({
         <div className="flex gap-2">
           <dt className="w-28 shrink-0 text-subtle">You pay</dt>
           <dd>
-            <strong className="font-semibold text-foreground">
-              {total} every {period}
-            </strong>
-            {interval === "yearly" ? ` — ${perMonth} a month` : ""}, plus tax where it applies. Charged in US dollars.
+            {discounted ? (
+              <>
+                <strong className="font-semibold text-foreground">
+                  {firstTotal} for your first {period}
+                </strong>
+                , then {total} every {period}
+              </>
+            ) : (
+              <>
+                <strong className="font-semibold text-foreground">
+                  {total} every {period}
+                </strong>
+                {interval === "yearly" ? ` — ${perMonth} a month` : ""}
+              </>
+            )}
+            , plus tax where it applies. Charged in US dollars.
           </dd>
         </div>
         <div className="flex gap-2">
           <dt className="w-28 shrink-0 text-subtle">It renews</dt>
           <dd>
-            Automatically, every {period}, until you cancel. Your card is charged again each time and Stripe emails you
-            a receipt.
+            Automatically, every {period}, until you cancel.
+            {discounted ? ` The discount applies to your first ${period} only, so the next charge is ${total}.` : ""}{" "}
+            Your card is charged again each time and Stripe emails you a receipt.
           </dd>
         </div>
         <div className="flex gap-2">

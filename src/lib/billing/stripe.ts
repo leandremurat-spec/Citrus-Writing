@@ -133,6 +133,11 @@ export async function createCheckoutSession(options: {
     saved_payment_method_options: { payment_method_save: "enabled" },
     integration_identifier: "custom_embedded_web_0002",
 
+    // Not a Checkout Studio setting — this is what lets a launch discount exist at all.
+    // Without it `applyPromotionCode` is refused by the session, so the field in
+    // `checkout-form.tsx` would have nothing to talk to.
+    allow_promotion_codes: true,
+
     // ------------------------------------------------------- what is being sold
     mode: "subscription",
     line_items: [{ price: options.priceId, quantity: 1 }],

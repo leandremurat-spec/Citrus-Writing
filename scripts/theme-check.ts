@@ -163,6 +163,9 @@ function checksFor(mode: PaletteMode): Check[] {
   add("--press-foreground on --press (button, active tab)", mode.onAccent, mode.press[BASE_STEP]);
   add("--press-foreground on --ochre", mode.onAccent, mode.ochre[BASE_STEP]);
   add("--proof-foreground on --proof", mode.onProof, mode.proof);
+  // checkout-form.tsx puts the discount-code error straight on the checkout card, which is
+  // neutral-100 rather than one of the three grounds above.
+  add("--proof as text on neutral-100 (discount code error)", mode.proof, mode.neutral[100]);
   // cadence-editor.tsx sets ochre-100 text on an ochre-700 fill for the active weekday.
   add("ochre-100 on ochre-700 (active weekday)", mode.ochre[100], mode.ochre[BASE_STEP]);
 

@@ -3,7 +3,9 @@
 import * as React from "react";
 import Script from "next/script";
 
-import type { BillingInterval } from "@/lib/billing/plans";
+import { formatPrice, type BillingInterval } from "@/lib/billing/plans";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { CheckoutAcknowledgement } from "./checkout-acknowledgement";
 
 /** Shown when someone presses pay without ticking the box, and cleared when they tick it. */
@@ -35,9 +37,31 @@ interface CheckoutFormHandle {
   on(event: "confirm", handler: (event: ConfirmEvent) => void | Promise<void>): void;
 }
 
+/** A money figure as the SDK reports it: a formatted string plus the integer minor units. */
+interface SdkAmount {
+  amount?: string;
+  minorUnitsAmount?: number;
+}
+
+interface SdkSession {
+  total?: { subtotal?: SdkAmount; discount?: SdkAmount };
+}
+
+interface PromotionResult {
+  type: "success" | "error";
+  error?: { message?: string };
+}
+
+interface CheckoutActions {
+  confirm(options: { formConfirmEvent: ConfirmEvent }): Promise<void>;
+  applyPromotionCode(code: string): Promise<PromotionResult>;
+  removePromotionCode(): Promise<PromotionResult>;
+  getSession(): Promise<SdkSession>;
+}
+
 interface LoadActionsResult {
   type: "success" | "error";
-  actions?: { confirm(options: { formConfirmEvent: ConfirmEvent }): Promise<void> };
+  actions?: CheckoutActions;
 }
 
 interface CheckoutSdk {
@@ -114,6 +138,65 @@ export function CheckoutForm({ interval }: { interval: BillingInterval }) {
     if (next) setError((current) => (current === ACK_REQUIRED ? null : current));
   };
 
+  /*
+   * The discount code.
+   *
+   * `actionsRef` is how this reaches the SDK: the actions are only available inside `start`,
+   * and the field renders outside it. `canRedeem` gates the control on `loadActions` having
+   * actually succeeded, so the field cannot be typed into before there is anything to apply it
+   * to.
+   *
+   * The applied discount is held as minor units rather than the SDK's formatted string, so the
+   * price shown in the acknowledgement can be computed with this app's own `formatPrice`
+   * instead of two formatters disagreeing about currency.
+   */
+  const actionsRef = React.useRef<CheckoutActions | null>(null);
+  const [canRedeem, setCanRedeem] = React.useState(false);
+  const [codeInput, setCodeInput] = React.useState("");
+  const [redeeming, setRedeeming] = React.useState(false);
+  const [promoError, setPromoError] = React.useState<string | null>(null);
+  const [discount, setDiscount] = React.useState<{ code: string; offCents: number } | null>(null);
+
+  const readDiscount = React.useCallback(async (code: string) => {
+    const session = await actionsRef.current?.getSession();
+    const off = session?.total?.discount?.minorUnitsAmount ?? 0;
+    setDiscount(off > 0 ? { code, offCents: off } : null);
+  }, []);
+
+  const applyCode = React.useCallback(async () => {
+    const code = codeInput.trim();
+    if (!code || !actionsRef.current) return;
+    setRedeeming(true);
+    setPromoError(null);
+    try {
+      const result = await actionsRef.current.applyPromotionCode(code);
+      if (result.type !== "success") {
+        setPromoError(result.error?.message ?? "That code could not be applied.");
+        return;
+      }
+      await readDiscount(code.toUpperCase());
+      setCodeInput("");
+    } catch {
+      setPromoError("That code could not be applied.");
+    } finally {
+      setRedeeming(false);
+    }
+  }, [codeInput, readDiscount]);
+
+  const removeCode = React.useCallback(async () => {
+    if (!actionsRef.current) return;
+    setRedeeming(true);
+    setPromoError(null);
+    try {
+      await actionsRef.current.removePromotionCode();
+      setDiscount(null);
+    } catch {
+      setPromoError("That code could not be removed.");
+    } finally {
+      setRedeeming(false);
+    }
+  }, []);
+
   const start = React.useCallback(async () => {
     if (started.current) return;
     started.current = true;
@@ -163,6 +246,9 @@ export function CheckoutForm({ interval }: { interval: BillingInterval }) {
       const loadActionsResult = await checkout.loadActions();
       if (loadActionsResult.type === "success" && loadActionsResult.actions) {
         const { actions } = loadActionsResult;
+        // The discount field needs these too, and it lives outside this callback.
+        actionsRef.current = actions;
+        setCanRedeem(true);
         form.on("confirm", async (event) => {
           // The control, rather than the courtesy. Stripe's own submit button lives inside its
           // iframe and cannot be disabled from here, so refusing the confirmation is the only
@@ -198,7 +284,66 @@ export function CheckoutForm({ interval }: { interval: BillingInterval }) {
     <>
       <Script src="https://js.stripe.com/dahlia/stripe.js" strategy="afterInteractive" onReady={() => void start()} />
 
-      <CheckoutAcknowledgement interval={interval} checked={acknowledged} onChange={acknowledge} />
+      {canRedeem ? (
+        <div className="flex flex-col gap-2">
+          {discount ? (
+            <div className="flex items-center justify-between gap-3 rounded-full bg-ochre-100 px-4 py-2 text-2xs text-ochre-900">
+              <span>
+                <strong className="font-semibold">{discount.code}</strong> — {formatPrice(discount.offCents)} off
+              </span>
+              <button
+                type="button"
+                onClick={() => void removeCode()}
+                disabled={redeeming}
+                className="focus-ring rounded-full underline underline-offset-2 disabled:opacity-60"
+              >
+                Remove
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Input
+                value={codeInput}
+                onChange={(event) => setCodeInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    void applyCode();
+                  }
+                }}
+                placeholder="Discount code"
+                aria-label="Discount code"
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                className="h-9 flex-1 text-sm"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void applyCode()}
+                disabled={redeeming || codeInput.trim().length === 0}
+                className="h-9"
+              >
+                Apply
+              </Button>
+            </div>
+          )}
+
+          {promoError ? (
+            <p role="alert" className="px-1 text-2xs text-proof">
+              {promoError}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <CheckoutAcknowledgement
+        interval={interval}
+        checked={acknowledged}
+        onChange={acknowledge}
+        discountOffCents={discount?.offCents ?? 0}
+      />
 
       {error ? (
         <p role="alert" className="rounded-md bg-proof/5 px-4 py-3 text-sm text-proof">
