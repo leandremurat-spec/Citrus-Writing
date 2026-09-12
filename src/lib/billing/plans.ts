@@ -16,6 +16,8 @@
  * of it. Everything that measures a *schedule* rather than a sentence is Serial.
  */
 
+import { DEFAULT_CURRENCY, formatMoney, SUPPORTED_CURRENCIES, type Currency } from "./currency";
+
 export type PlanId = "DRAWER" | "SERIAL";
 
 /** The four things an export can be scoped to. Mirrors the dialog's own segmented control. */
@@ -53,10 +55,16 @@ export interface PlanDefinition {
   name: string;
   /** The one-line positioning under the plan name on the pricing card. */
   tagline: string;
-  /** Price in whole US cents, so nothing here is ever a float. `0` is free forever. */
-  monthlyCents: number;
-  /** Billed once a year. The per-month figure the card shows is derived, never stored twice. */
-  yearlyCents: number;
+  /**
+   * What the plan costs, per currency, in that currency's minor units — so nothing here is ever
+   * a float. `0` is free forever.
+   *
+   * These are not conversions and must never be computed as one. Each is the amount Stripe
+   * actually charges in that currency, transcribed from the price's `currency_options`, and
+   * `npm run stripe:check` fails if any of them drifts from what Stripe would take. A rate
+   * applied at render time would be right on the day it was written and wrong every day after.
+   */
+  prices: Record<Currency, { monthlyCents: number; yearlyCents: number }>;
   capabilities: PlanCapabilities;
 }
 
@@ -65,8 +73,12 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     id: "DRAWER",
     name: "Drawer",
     tagline: "One story, taken seriously.",
-    monthlyCents: 0,
-    yearlyCents: 0,
+    prices: {
+      usd: { monthlyCents: 0, yearlyCents: 0 },
+      cad: { monthlyCents: 0, yearlyCents: 0 },
+      eur: { monthlyCents: 0, yearlyCents: 0 },
+      gbp: { monthlyCents: 0, yearlyCents: 0 },
+    },
     capabilities: {
       maxNovels: 1,
       snapshotsPerChapter: 20,
@@ -92,8 +104,12 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     // **Changing these means changing Stripe, and the two are checked against each other.**
     // `npm run stripe:check` fails when a price here disagrees with the price actually charged,
     // because the pricing page and the refund policy both quote this file.
-    monthlyCents: 600,
-    yearlyCents: 4800,
+    prices: {
+      usd: { monthlyCents: 600, yearlyCents: 4800 },
+      cad: { monthlyCents: 800, yearlyCents: 6000 },
+      eur: { monthlyCents: 600, yearlyCents: 4800 },
+      gbp: { monthlyCents: 500, yearlyCents: 3600 },
+    },
     capabilities: {
       maxNovels: null,
       snapshotsPerChapter: null,
@@ -112,26 +128,45 @@ export function capabilitiesFor(plan: PlanId): PlanCapabilities {
   return PLANS[plan].capabilities;
 }
 
-export function priceCents(plan: PlanId, interval: BillingInterval): number {
-  return interval === "yearly" ? PLANS[plan].yearlyCents : PLANS[plan].monthlyCents;
+export function priceCents(
+  plan: PlanId,
+  interval: BillingInterval,
+  currency: Currency = DEFAULT_CURRENCY,
+): number {
+  const prices = PLANS[plan].prices[currency];
+  return interval === "yearly" ? prices.yearlyCents : prices.monthlyCents;
 }
 
 /** What a plan costs per month on a given interval — the number the pricing card shows. */
-export function perMonthCents(plan: PlanId, interval: BillingInterval): number {
-  const cents = priceCents(plan, interval);
+export function perMonthCents(
+  plan: PlanId,
+  interval: BillingInterval,
+  currency: Currency = DEFAULT_CURRENCY,
+): number {
+  const cents = priceCents(plan, interval, currency);
   return interval === "yearly" ? Math.round(cents / 12) : cents;
 }
 
 /** What a year on the monthly plan costs over a year paid up front. */
-export function yearlySavingCents(plan: PlanId): number {
-  return Math.max(0, PLANS[plan].monthlyCents * 12 - PLANS[plan].yearlyCents);
+export function yearlySavingCents(plan: PlanId, currency: Currency = DEFAULT_CURRENCY): number {
+  const prices = PLANS[plan].prices[currency];
+  return Math.max(0, prices.monthlyCents * 12 - prices.yearlyCents);
 }
 
-/** "$7", "$8.40", "Free" — whole dollars lose the ".00", because most of these are whole. */
-export function formatPrice(cents: number): string {
-  if (cents === 0) return "Free";
-  const dollars = cents / 100;
-  return `$${Number.isInteger(dollars) ? dollars : dollars.toFixed(2)}`;
+/** Every currency this app quotes, for the surfaces that must list them all. */
+export function everyCurrency(): readonly Currency[] {
+  return SUPPORTED_CURRENCIES;
+}
+
+/**
+ * "$6", "CA$8", "Free".
+ *
+ * Kept as the name the app already calls everywhere, now currency-aware. It delegates rather
+ * than formatting, so there is one place that decides CA$ is how Canadian dollars are told apart
+ * from US ones.
+ */
+export function formatPrice(cents: number, currency: Currency = DEFAULT_CURRENCY): string {
+  return formatMoney(cents, currency);
 }
 
 export function planAllowsScope(plan: PlanId, scope: ExportScopeId): boolean {

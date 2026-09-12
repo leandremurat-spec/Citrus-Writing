@@ -15,6 +15,7 @@ import {
   type BillingInterval,
   type PlanId,
 } from "@/lib/billing/plans";
+import { currencyName, DEFAULT_CURRENCY, type Currency } from "@/lib/billing/currency";
 import { firstChargeCents, type LaunchPromo } from "@/lib/billing/promo";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -53,17 +54,24 @@ function Tick({ included, tone }: { included: boolean; tone: string }) {
 export function PricingPlans({
   currentPlan,
   promo = null,
+  currency = DEFAULT_CURRENCY,
 }: {
   currentPlan: PlanId | null;
   /** Resolved on the server — see the pricing page. Null when no offer is running. */
   promo?: LaunchPromo | null;
+  /**
+   * Resolved on the server too, from the request's country. Every figure on this page is in it,
+   * and the Checkout Session is created with the same one, so the quote and the charge cannot
+   * disagree.
+   */
+  currency?: Currency;
 }) {
   const router = useRouter();
   const [interval, setInterval] = React.useState<BillingInterval>("yearly");
   const [pending, setPending] = React.useState(false);
 
-  const serialPerMonth = formatPrice(perMonthCents("SERIAL", interval));
-  const saving = formatPrice(yearlySavingCents("SERIAL"));
+  const serialPerMonth = formatPrice(perMonthCents("SERIAL", interval, currency), currency);
+  const saving = formatPrice(yearlySavingCents("SERIAL", currency), currency);
 
   // Only worth showing to someone who could actually redeem it: the Stripe code is restricted
   // to first-time customers, so advertising it to an existing subscriber is an offer they
@@ -76,7 +84,7 @@ export function PricingPlans({
     promo && currentPlan !== "SERIAL"
       ? {
           code: promo.code,
-          first: formatPrice(firstChargeCents(promo, interval)),
+          first: formatPrice(firstChargeCents(promo, interval, currency), currency),
           period: interval === "yearly" ? "year" : "month",
         }
       : null;

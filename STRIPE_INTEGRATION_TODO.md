@@ -377,3 +377,203 @@ final second, inactive one second later.
 - [ ] Run `npm run stripe:check` after any Stripe change. It has now caught two live breakages
       that nothing else would have: a price id from the wrong ledger, and this archived one.
 
+
+## Currencies
+
+The app quotes and charges in **USD, CAD, EUR and GBP**; everyone else is billed in USD.
+
+| | USD | CAD | EUR | GBP |
+|---|---|---|---|---|
+| Monthly | $6 | CA$8 | €6 | £5 |
+| Yearly | $48 | CA$60 | €48 | £36 |
+
+**These are prices, not conversions, and must never be computed as one.** Each is the amount
+Stripe actually charges, transcribed from the price's `currency_options`. A rate applied at
+render time is right on the day it is written and wrong every day after.
+
+### The app picks the currency and tells Stripe
+
+This is the whole design, and it exists because the alternative already failed.
+
+Stripe's `currency_options` will choose for you, from the customer's location, at the moment the
+form is confirmed — which is *after* the page has quoted a figure. That is how this app came to
+show "$6 a month", have a writer tick a box reading "Charged in US dollars", and take CAD 8.00.
+Three surfaces disagreed with the receipt, and nothing in the codebase could have caught it,
+because the number shown and the number charged were decided by different parties at different
+times.
+
+So the currency is resolved once, server-side, from Cloudflare's `CF-IPCountry` header; every
+figure on the page comes from it; and it is passed explicitly as `currency` on the Checkout
+Session. The quote and the charge are one decision rather than two that usually agree.
+
+The country is a guess — a VPN or a traveller defeats it — so it only ever selects among
+currencies we are willing to charge, and the fallback is USD rather than an error. Being quoted
+in the wrong currency is a mild annoyance; being quoted one and charged another is the bug this
+replaces.
+
+### Why AUD is not on the list
+
+Stripe carries an AUD amount on the monthly price and **not** on the yearly one. Offering it
+would quote Australian dollars for one plan and US dollars for the other on the same page. Add
+`AUD` to the yearly price's `currency_options` and it can join `SUPPORTED_CURRENCIES` in
+`lib/billing/currency.ts` — `stripe:check` will tell you if the amounts disagree.
+
+### What the check enforces
+
+Every currency in `SUPPORTED_CURRENCIES` must exist on **both** prices at **exactly** the amount
+`plans.ts` quotes. A missing one is fatal, not a fallback: the app names its currency on the
+session, so a currency Stripe does not carry is a session Stripe refuses. A differing amount is
+the original bug in a new coat.
+
+Currencies Stripe carries that the app never selects are reported as a warning — harmless,
+since nothing can choose them, but worth seeing.
+
+## `npm run stripe:check`
+
+Run it before a deploy, and after changing any Stripe variable.
+
+```bash
+npm run stripe:check
+```
+
+It exists because live checkout broke once with `No such price`, and nothing caught it until
+someone tried to pay and a server log was read by hand. **Stripe's test and live modes are
+separate ledgers**, so a price id created in one is simply absent in the other — and every
+symptom before the moment of payment looked healthy: the build passed, the page rendered, the
+route guarded correctly, the form mounted.
+
+What it asserts:
+
+| | |
+|---|---|
+| Key modes agree | A `sk_live_` secret with a `pk_test_` publishable fails later and far more confusingly than a missing key. |
+| Every price resolves | Against the configured key, naming the mode — because "No such price" alone sends people hunting for a typo rather than for the other ledger. |
+| Prices match `plans.ts` | The pricing page *and* the refund policy quote that file, so a mismatch is a price we state and do not charge. |
+| Intervals are right | The monthly slot recurs monthly; the yearly slot yearly. |
+| One currency | Two prices in different currencies is a pricing page that cannot add up. |
+| The webhook secret exists | Without it every webhook is rejected and no plan is ever granted. |
+| `promo.ts` matches Stripe | The code exists, its expiry matches the declared window, and the percentage matches. Fatal while the offer is open, a warning before it — the objects may legitimately not exist yet. |
+
+Three deliberate limits:
+
+- **It never prints a secret.** Keys are reported by mode only. A check you cannot paste into a
+  CI log is a check nobody runs.
+- **It is not in `npm run build`.** It needs the network and a real key; a build failing because
+  Stripe is unreachable would be a worse problem than the one it prevents. `legal:check` is in
+  the build because it is offline and deterministic.
+- **No key exits clean.** Running without `STRIPE_SECRET_KEY` is supported — the upgrade path
+  switches the plan directly, and is refused in production.
+
+## Going live
+
+Everything below is configuration and account setup — **no further code changes are required**
+to take payments. Verified locally before writing this: `npm run build`, `typecheck`, `lint`,
+`theme:check` (624 pairings), `export:check` and `legal:check` all pass.
+
+### 0. The domain — settled, and already live
+
+**`citruswritinglab.com`**, which is what
+[`src/content/legal/details.ts`](src/content/legal/details.ts) already declares as `siteUrl`, so
+the Terms, Privacy Policy and Refund Policy name the right service. No change needed.
+
+It is already serving, through Cloudflare to Railway, on a valid Let's Encrypt certificate
+(TLSv1.3, correct SANs) with an http → https 301 and no mixed content. Two gaps found while
+checking, neither blocking a launch:
+
+- **`www.citruswritinglab.com` does not resolve** — anyone typing `www.` gets a DNS failure
+  rather than a redirect. Add the record.
+- **No security headers at all** — no HSTS, CSP, `X-Frame-Options`, `X-Content-Type-Options` or
+  `Referrer-Policy`. No browser calls this "not secure", but without HSTS the first request over
+  http is interceptable, which is worth closing on a site taking card payments.
+
+### 1. Activate the Stripe account
+
+Live keys do not exist until the account is activated — business details, and a bank account for
+payouts. The entity is Canadian (Montreal), so expect GST/QST questions; the refund policy
+already states that prices are USD and that Canadian customers are charged tax.
+
+### 2. Create the two live Prices
+
+**Test price IDs do not work in live mode** — they are separate objects in a separate ledger.
+Create a monthly and a yearly Price in live mode, and make the amounts match what
+[`src/lib/billing/plans.ts`](src/lib/billing/plans.ts) advertises. The pricing page *and* the
+refund policy both read their figures from that file, so a mismatch is not a stale label — it is
+a refund policy quoting a price you do not charge.
+
+### 3. Register the live webhook
+
+Endpoint `https://<domain>/api/stripe/webhook`, subscribed to the four events in the Webhook
+section above. Live mode issues its **own** signing secret — a test-mode `whsec_` will reject
+every live event with a 400.
+
+### 4. Set the live variables on Railway
+
+Project `believable-spirit`, service `Citrus-Writing`, production environment.
+
+| Variable | Value |
+|---|---|
+| `STRIPE_SECRET_KEY` | `sk_live_...` |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_live_...` |
+| `STRIPE_PRICE_SERIAL_MONTHLY` | live monthly Price id |
+| `STRIPE_PRICE_SERIAL_YEARLY` | live yearly Price id |
+| `STRIPE_WEBHOOK_SECRET` | `whsec_...` from the **live** endpoint |
+| `RESEND_API_KEY`, `MAIL_FROM` | otherwise password-reset links are only printed to the server log |
+
+**`NEXT_PUBLIC_` variables are inlined at build time, not read at runtime.** Changing the
+publishable key needs a *redeploy*, not a restart — setting it and restarting will silently keep
+serving the old key.
+
+### 5. Point the domain at Railway
+
+The service currently answers on `citrus-writing-production.up.railway.app`. Add `<domain>` as a
+custom domain and set the DNS record Railway asks for. Nothing in the app hardcodes a host — the
+checkout return URL is built from the request's own `x-forwarded-host` — so no code changes.
+
+### 6. OAuth redirect URIs, if you use them
+
+Only if `GOOGLE_CLIENT_ID`/`SECRET` or `GITHUB_CLIENT_ID`/`SECRET` are set. A provider missing
+either variable does not render a button and its route 404s, so this is optional. If used,
+register `https://<domain>/api/auth/oauth/google/callback` and the GitHub equivalent.
+
+### 7. Take one real payment, then refund it
+
+A live card, end to end: the plan should flip to Serial **from the webhook**, not from the
+browser returning. Then refund it from the Dashboard and confirm the account drops back. This
+exercises the one path no test-mode run can fully prove.
+
+### A safety property worth knowing
+
+Without `STRIPE_SECRET_KEY`, this app falls back to switching the plan directly — and **that
+fallback is refused in production**. A deploy that is missing its keys therefore fails the
+upgrade loudly instead of quietly handing out the paid plan.
+
+## Next steps
+
+- [x] ~~Contrast on the payment form~~ — resolved by making the appearance per mode.
+- [x] ~~The app's typeface in the form~~ — `"Segoe UI"` is a system font, so it needs no `fonts`
+      option and makes no external request.
+- [ ] *Latent, not scheduled.* The webhook's `checkout.session.completed` handler opens with
+      `if (!session.subscription) break;`, so a `mode: "payment"` session would be acknowledged
+      and granted nothing. No such product exists — the $39 one-time was dropped in favour of the
+      launch discount — but anyone adding one must handle that branch or the money arrives with
+      no plan attached.
+- [ ] Decide whether `allow_promotion_codes` should come back (see "Removed" above). If yes, set
+      it in Checkout Studio rather than by hand, so the next sync does not strip it again.
+      Relevant to any launch discount.
+- [ ] Confirm the **live-mode** price IDs. Test and live are separate ledgers — the two Serial
+      prices verified here ($9/month, $84/year, matching `lib/billing/plans.ts`) exist in test
+      mode; live mode needs its own.
+- [ ] Register the production webhook endpoint and put its `whsec_...` value in the deploy
+      environment.
+- [ ] `RESEND_API_KEY` and a verified sending domain. Without them the password-reset link is
+      only printed to the server log, which leaves a locked-out writer with no way back in.
+- [ ] Fulfilment beyond the plan grant (receipts, onboarding email) is not wired — the only mail
+      this app sends today is the password reset.
+
+## Resources
+
+- Stripe docs — https://docs.stripe.com
+- Stripe MCP — https://docs.stripe.com/mcp
+- Support — https://support.stripe.com
+- Prices in the Dashboard — https://dashboard.stripe.com/prices
+- Webhooks in the Dashboard — https://dashboard.stripe.com/workbench/webhooks

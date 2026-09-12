@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
 
 import { getCurrentUser } from "@/lib/auth/session";
 import type { PlanId } from "@/lib/billing/plans";
+import { currencyFromHeaders } from "@/lib/billing/currency";
 import { activePromo } from "@/lib/billing/promo";
 import { Button } from "@/components/ui/button";
 import { MarketingFooter, MarketingNav, MarketingWidth } from "@/components/marketing/marketing-chrome";
@@ -53,7 +55,11 @@ export default async function PricingPage() {
 
           {/* Resolved on the server: reading the clock in the client component would disagree
               with the server render and break hydration for the page. */}
-          <PricingPlans currentPlan={user ? (user.plan as PlanId) : null} promo={activePromo()} />
+          <PricingPlans
+            currentPlan={user ? (user.plan as PlanId) : null}
+            promo={activePromo()}
+            currency={currencyFromHeaders(await headers())}
+          />
         </section>
 
         {/* ------------------------------------------------------ comparison */}

@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { authorize } from "@/lib/auth/guard";
 import { createCheckoutSession, isConfigured, priceIdFor } from "@/lib/billing/stripe";
+import { currencyFromHeaders } from "@/lib/billing/currency";
 import { originFrom } from "@/lib/http/origin";
 
 /**
@@ -48,7 +49,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Payments are not set up yet. Nothing was charged." }, { status: 503 });
   }
 
-  const requestOrigin = originFrom(await headers());
+  const store = await headers();
+  const requestOrigin = originFrom(store);
+  // The same resolution the pricing and checkout pages used to quote a figure, so the charge
+  // cannot land in a different currency from the one the writer was shown.
+  const currency = currencyFromHeaders(store);
 
   try {
     const session = await createCheckoutSession({
@@ -60,6 +65,7 @@ export async function POST(request: Request) {
       // webhook, because a browser arriving here proves nothing about whether the payment
       // cleared.
       returnUrl: requestOrigin + "/account?upgraded=1",
+      currency,
     });
     return NextResponse.json({ client_secret: session.client_secret });
   } catch (error) {

@@ -3,6 +3,7 @@
 import * as React from "react";
 import Script from "next/script";
 
+import { DEFAULT_CURRENCY, type Currency } from "@/lib/billing/currency";
 import { formatPrice, type BillingInterval } from "@/lib/billing/plans";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -120,8 +121,11 @@ function appearanceForCurrentTheme() {
 export function CheckoutForm({
   interval,
   suggestedCode = null,
+  currency = DEFAULT_CURRENCY,
 }: {
   interval: BillingInterval;
+  /** The currency this writer is quoted in, and the one the session is created with. */
+  currency?: Currency;
   /**
    * The launch code, when one is running. The field starts filled in with it rather than the
    * writer being told a code and asked to retype it — the offer is ours, so making them
@@ -301,7 +305,7 @@ export function CheckoutForm({
           {discount ? (
             <div className="flex items-center justify-between gap-3 rounded-full bg-ochre-100 px-4 py-2 text-2xs text-ochre-900">
               <span>
-                <strong className="font-semibold">{discount.code}</strong> — {formatPrice(discount.offCents)} off
+                <strong className="font-semibold">{discount.code}</strong> — {formatPrice(discount.offCents, currency)} off
               </span>
               <button
                 type="button"
@@ -355,6 +359,7 @@ export function CheckoutForm({
         checked={acknowledged}
         onChange={acknowledge}
         discountOffCents={discount?.offCents ?? 0}
+        currency={currency}
       />
 
       {error ? (

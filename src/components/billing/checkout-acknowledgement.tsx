@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { currencyName, DEFAULT_CURRENCY, type Currency } from "@/lib/billing/currency";
 import { formatPrice, perMonthCents, priceCents, type BillingInterval } from "@/lib/billing/plans";
 import { CheckRow } from "@/components/auth/auth-parts";
 
@@ -48,20 +49,27 @@ export function CheckoutAcknowledgement({
   checked,
   onChange,
   discountOffCents = 0,
+  currency = DEFAULT_CURRENCY,
 }: {
   interval: BillingInterval;
   checked: boolean;
   onChange: (checked: boolean) => void;
   /** Taken off the first charge only. Zero when no code is applied. */
   discountOffCents?: number;
+  /**
+   * The currency the session is created with. This block states the total price before the
+   * order, which is a pre-contract requirement in the UK and EU — so it has to name the
+   * currency the card is actually charged in, not a house default.
+   */
+  currency?: Currency;
 }) {
-  const fullCents = priceCents("SERIAL", interval);
-  const total = formatPrice(fullCents);
+  const fullCents = priceCents("SERIAL", interval, currency);
+  const total = formatPrice(fullCents, currency);
   const period = interval === "yearly" ? "year" : "month";
-  const perMonth = formatPrice(perMonthCents("SERIAL", interval));
+  const perMonth = formatPrice(perMonthCents("SERIAL", interval, currency), currency);
 
   const discounted = discountOffCents > 0;
-  const firstTotal = formatPrice(Math.max(fullCents - discountOffCents, 0));
+  const firstTotal = formatPrice(Math.max(fullCents - discountOffCents, 0), currency);
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -84,7 +92,7 @@ export function CheckoutAcknowledgement({
                 {interval === "yearly" ? ` — ${perMonth} a month` : ""}
               </>
             )}
-            , plus tax where it applies. Charged in US dollars.
+            , plus tax where it applies. Charged in {currencyName(currency)}.
           </dd>
         </div>
         <div className="flex gap-2">

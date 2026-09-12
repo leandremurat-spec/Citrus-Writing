@@ -117,6 +117,14 @@ export async function createCheckoutSession(options: {
   email: string;
   customerId: string | null;
   returnUrl: string;
+  /**
+   * Which of the price's `currency_options` to charge in.
+   *
+   * Passed explicitly rather than left to Stripe, which would otherwise choose from the
+   * customer's location at confirmation time — after the page has already quoted a figure. That
+   * is how "$6 a month" became a CAD 8.00 charge. The app decides once and both sides follow.
+   */
+  currency: string;
 }): Promise<CheckoutSession> {
   return call<CheckoutSession>("/checkout/sessions", {
     // ---------------------------------------------- configured in Checkout Studio
@@ -140,6 +148,7 @@ export async function createCheckoutSession(options: {
 
     // ------------------------------------------------------- what is being sold
     mode: "subscription",
+    currency: options.currency,
     line_items: [{ price: options.priceId, quantity: 1 }],
 
     // -------------------------------------------- identity, so the webhook can act

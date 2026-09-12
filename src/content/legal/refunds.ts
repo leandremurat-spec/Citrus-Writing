@@ -1,4 +1,5 @@
-import { formatPrice, perMonthCents, PLANS } from "@/lib/billing/plans";
+import { currencyName } from "@/lib/billing/currency";
+import { everyCurrency, formatPrice, perMonthCents, priceCents } from "@/lib/billing/plans";
 
 import type { LegalDocument } from "./document";
 import { legalDetails } from "./details";
@@ -32,8 +33,22 @@ import { legalDetails } from "./details";
 
 const { product, contactEmail } = legalDetails;
 
-const monthly = formatPrice(PLANS.SERIAL.monthlyCents);
-const yearly = formatPrice(PLANS.SERIAL.yearlyCents);
+/*
+ * This document is built once, at module load, and is the same for every reader — so unlike the
+ * pricing page it cannot quote the one currency a particular writer will be charged in. It
+ * names them all instead, which is also the more useful thing for a policy: a reader working
+ * out what they were charged wants the whole table, not the row they happen to be in.
+ */
+const perCurrency = everyCurrency()
+  .map((currency) => {
+    const month = formatPrice(priceCents("SERIAL", "monthly", currency), currency);
+    const year = formatPrice(priceCents("SERIAL", "yearly", currency), currency);
+    return `${month} a month or ${year} a year in ${currencyName(currency)}`;
+  })
+  .join("; ");
+
+const monthly = formatPrice(priceCents("SERIAL", "monthly"));
+const yearly = formatPrice(priceCents("SERIAL", "yearly"));
 const yearlyPerMonth = formatPrice(perMonthCents("SERIAL", "yearly"));
 
 export const refunds: LegalDocument = {
@@ -57,6 +72,7 @@ export const refunds: LegalDocument = {
       blocks: [
         `Drawer is free. It stays free, it does not expire, and it is not a trial — one serial, the whole writing surface, and export.`,
         `Serial is *${monthly} a month*, or *${yearly} a year* — which works out at ${yearlyPerMonth} a month.`,
+        `Those are the US dollar prices. Where we support your local currency you are quoted and charged in it, at a price we set rather than a conversion of the dollar one: ${perCurrency}. The price you are shown before you pay is the price you are charged; if your country is not on that list, the charge is in US dollars and your bank may add its own conversion fee, which we never see.`,
         `*Prices are in US dollars, and we are a Canadian company.* If your card is in another currency, your bank converts it at its own rate and may add a foreign-transaction fee of its own — so the figure on your statement can differ slightly from the figure above, and that difference is your bank's rather than ours.`,
         "Sales tax is added at checkout where it applies to you — GST and QST for Canadian customers, VAT or its local equivalent elsewhere — and the total you will actually be charged is shown before you pay, not after.",
         "There is no setup fee, no per-chapter charge and no charge for exporting your own work.",

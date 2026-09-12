@@ -31,7 +31,8 @@
  * account — so this reports that and exits clean.
  */
 
-import { priceCents } from "../src/lib/billing/plans";
+import { currencyName, SUPPORTED_CURRENCIES } from "../src/lib/billing/currency";
+import { everyCurrency, formatPrice, priceCents } from "../src/lib/billing/plans";
 import { activePromo, LAUNCH_PROMO } from "../src/lib/billing/promo";
 
 try {
@@ -165,25 +166,43 @@ async function main(): Promise<void> {
     }
 
     /*
-     * Multi-currency prices are a Stripe feature the app has no idea about.
+     * Every currency the app quotes must exist on this price, at the amount the app quotes.
      *
-     * `currency_options` lets one price charge a different amount per currency, and Checkout
-     * picks by the customer's location. That is invisible to `plans.ts`, which holds a single
-     * figure — so a Canadian writer can read "$6 a month" on the pricing page, tick a box
-     * saying "Charged in US dollars", and be charged CAD 8.00. The page, the checkout
-     * disclosure and the refund policy are then all wrong at once, for that customer only.
-     *
-     * Reported rather than fatal: it is a deliberate Stripe setting and might be intended. But
-     * it cannot be *silent*, because the only place it shows up otherwise is a real receipt.
+     * The app now chooses the currency and passes it on the Checkout Session, so a currency in
+     * `SUPPORTED_CURRENCIES` that Stripe does not carry is not a fallback — it is a session
+     * Stripe will refuse. And an amount that differs is the original bug in a new coat: a figure
+     * shown on the page that the card is not charged.
      */
     const options = price.currency_options ?? {};
-    const extra = Object.keys(options).filter((code) => code !== price.currency);
-    if (extra.length > 0) {
+    for (const currency of SUPPORTED_CURRENCIES) {
+      const onStripe = currency === price.currency ? price.unit_amount : options[currency]?.unit_amount;
+      const declared = priceCents("SERIAL", slot.plan, currency);
+
+      if (onStripe === undefined) {
+        failures.push(
+          `${slot.label} has no ${currency.toUpperCase()} amount, but the app quotes ` +
+            `${formatPrice(declared, currency)} in ${currencyName(currency)}. Add it to the price's ` +
+            `currency_options, or drop ${currency.toUpperCase()} from SUPPORTED_CURRENCIES.`,
+        );
+        continue;
+      }
+      if (onStripe !== declared) {
+        failures.push(
+          `${slot.label} charges ${(onStripe / 100).toFixed(2)} ${currency.toUpperCase()}, but the app ` +
+            `quotes ${formatPrice(declared, currency)}.`,
+        );
+      }
+    }
+
+    // Currencies Stripe carries that the app never offers are harmless — nothing can select
+    // them, because the session names its currency — but worth seeing.
+    const unused = Object.keys(options).filter(
+      (code) => code !== price.currency && !(SUPPORTED_CURRENCIES as readonly string[]).includes(code),
+    );
+    if (unused.length > 0) {
       warnings.push(
-        `${slot.label} also charges ${extra
-          .map((code) => `${((options[code].unit_amount ?? 0) / 100).toFixed(2)} ${code.toUpperCase()}`)
-          .join(", ")} — plans.ts knows only ${((price.unit_amount ?? 0) / 100).toFixed(2)} ` +
-          `${(price.currency ?? "").toUpperCase()}, and the checkout disclosure says the charge is in US dollars.`,
+        `${slot.label} also carries ${unused.map((c) => c.toUpperCase()).join(", ")}, which the app never ` +
+          `selects. Harmless, but nobody will ever be charged in them.`,
       );
     }
 
@@ -302,6 +321,7 @@ async function main(): Promise<void> {
   console.log(`\nStripe ${secretMode} mode` + (publishableMode ? ` (publishable key: ${publishableMode})` : ""));
   for (const note of notes) console.log("  " + note);
   console.log("  promotion " + LAUNCH_PROMO.code + (promoIsLive ? " — offer is open" : " — offer is not open yet"));
+  console.log("  currencies " + everyCurrency().map((c) => c.toUpperCase()).join(", "));
 
   if (warnings.length > 0) {
     console.log(`\n${warnings.length} warning${warnings.length === 1 ? "" : "s"}:`);

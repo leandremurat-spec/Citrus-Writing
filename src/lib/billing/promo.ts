@@ -1,3 +1,4 @@
+import { DEFAULT_CURRENCY, type Currency } from "./currency";
 import { priceCents, type BillingInterval } from "./plans";
 
 /**
@@ -83,7 +84,11 @@ export function activePromo(now: Date = new Date()): LaunchPromo | null {
  *
  * Rounded the way Stripe rounds a percentage discount: to the nearest cent, on the total.
  */
-export function firstChargeCents(promo: LaunchPromo, interval: BillingInterval): number {
-  const full = priceCents("SERIAL", interval);
+export function firstChargeCents(
+  promo: LaunchPromo,
+  interval: BillingInterval,
+  currency: Currency = DEFAULT_CURRENCY,
+): number {
+  const full = priceCents("SERIAL", interval, currency);
   return Math.max(full - Math.round((full * promo.percentOff) / 100), 0);
 }
