@@ -113,3 +113,16 @@ export type WritingSession = Prisma.WritingSessionModel
  * src/lib/settings/appearance.ts for why the two are split.
  */
 export type AuthorSettings = Prisma.AuthorSettingsModel
+/**
+ * Model RateLimit
+ * A fixed-window counter, for refusing abuse before it reaches anything expensive.
+ * 
+ * Keyed by a salted SHA-256 of what is being limited, so neither an email address nor an IP is
+ * stored here in a form anyone can read back — including us. An IPv4 address is only 32 bits,
+ * so an unsalted hash of one is reversible by brute force in seconds; the salt is what makes
+ * this a one-way record rather than a reversible one.
+ * 
+ * Rows are disposable by design: each carries its own expiry, expired ones are swept
+ * opportunistically, and nothing else in the app reads this table.
+ */
+export type RateLimit = Prisma.RateLimitModel

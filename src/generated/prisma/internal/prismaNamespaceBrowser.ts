@@ -65,7 +65,8 @@ export const ModelName = {
   ChapterSnapshot: 'ChapterSnapshot',
   NovelDay: 'NovelDay',
   WritingSession: 'WritingSession',
-  AuthorSettings: 'AuthorSettings'
+  AuthorSettings: 'AuthorSettings',
+  RateLimit: 'RateLimit'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -291,6 +292,15 @@ export const AuthorSettingsScalarFieldEnum = {
 } as const
 
 export type AuthorSettingsScalarFieldEnum = (typeof AuthorSettingsScalarFieldEnum)[keyof typeof AuthorSettingsScalarFieldEnum]
+
+
+export const RateLimitScalarFieldEnum = {
+  key: 'key',
+  count: 'count',
+  expiresAt: 'expiresAt'
+} as const
+
+export type RateLimitScalarFieldEnum = (typeof RateLimitScalarFieldEnum)[keyof typeof RateLimitScalarFieldEnum]
 
 
 export const SortOrder = {

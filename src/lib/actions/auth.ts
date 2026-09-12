@@ -3,6 +3,7 @@
 import { createHash, randomBytes } from "node:crypto";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { z } from "zod";
 
 import { fail, type ActionResult } from "@/lib/actions/result";
@@ -20,7 +21,9 @@ import {
   getCurrentUser,
   pruneExpiredSessions,
 } from "@/lib/auth/session";
+import { clientIp, isLimited, record } from "@/lib/auth/rate-limit";
 import { prisma } from "@/lib/db";
+import { passwordResetEmail } from "@/lib/mail/messages";
 import { deliver, type Delivery } from "@/lib/mail/send";
 
 /**
@@ -68,6 +71,16 @@ const signUpSchema = z.object({
  * the sign-up screen promises. An "Untitled serial" nobody asked for is worse than one screen.
  */
 export async function signUp(input: z.input<typeof signUpSchema>): Promise<ActionResult<{ userId: string }>> {
+  /*
+   * Per-IP only. There is no third party to protect here — an address either is taken or is
+   * not, and the duplicate check has to say so — so the thing worth limiting is one origin
+   * manufacturing accounts, which is what a per-email rule cannot see at all.
+   */
+  const signUpFrom = clientIp(await headers());
+  if (await isLimited("signUpIp", signUpFrom)) {
+    return fail("Too many accounts created from here. Wait a while and try again.");
+  }
+
   const parsed = signUpSchema.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Check the form and try again.");
   const data = parsed.data;
@@ -96,6 +109,10 @@ export async function signUp(input: z.input<typeof signUpSchema>): Promise<Actio
     return fail("There is already an account with that email. Sign in instead.");
   }
 
+  // Counted on success rather than on every call: a refused duplicate is someone mistyping
+  // which account they already have, and should not spend the allowance.
+  await record("signUpIp", signUpFrom);
+
   await createSession(userId);
   revalidatePath("/", "layout");
   return { ok: true, userId };
@@ -110,6 +127,26 @@ export async function signIn(input: z.input<typeof signInSchema>): Promise<Actio
   const parsed = signInSchema.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Check the form and try again.");
 
+  /*
+   * The limit is checked before anything is looked up, and recorded only when the attempt
+   * fails. Signing in correctly never counts against you, which is what separates a defence
+   * from a quota — a writer with the app open on two machines should never meet this.
+   *
+   * Saying "too many attempts" plainly is deliberate, and does not leak: it is true whether or
+   * not the address exists, because a failure against a non-existent account is counted exactly
+   * like one against a real one.
+   */
+  const ip = clientIp(await headers());
+  if ((await isLimited("signInEmail", parsed.data.email)) || (await isLimited("signInIp", ip))) {
+    return fail("Too many sign-in attempts. Wait a few minutes and try again.");
+  }
+
+  const failed = async () => {
+    await record("signInEmail", parsed.data.email);
+    await record("signInIp", ip);
+    return fail("That email and password do not match an account.");
+  };
+
   const user = await prisma.user.findUnique({
     where: { email: parsed.data.email },
     select: { id: true, passwordHash: true },
@@ -119,11 +156,11 @@ export async function signIn(input: z.input<typeof signInSchema>): Promise<Actio
     // No account, or an account that has only ever used a provider. Both spend the same time
     // as a real failed verification, so the two cannot be told apart from outside.
     await burnVerificationTime();
-    return fail("That email and password do not match an account.");
+    return failed();
   }
 
   if (!(await verifyPassword(parsed.data.password, user.passwordHash))) {
-    return fail("That email and password do not match an account.");
+    return failed();
   }
 
   // Right password, hash made under weaker parameters than today's: upgrade it in place while
@@ -269,6 +306,28 @@ export async function requestPasswordReset(
   // but nothing beyond it.
   if (!parsed.success) return fail("That does not look like an email address.");
 
+  /*
+   * Two limits, answered differently, and the difference is the point.
+   *
+   * The per-IP one is about the requester, so it can be refused out loud — it says nothing
+   * about any address.
+   *
+   * The per-email one is about the *target*, and saying "that address has had too many resets"
+   * would announce that the address exists, undoing the neutral answer this action is built
+   * around. So it returns the same cheerful success as everything else and quietly sends
+   * nothing. A person resetting their own password three times in an hour has their mail
+   * already; someone burying a stranger's inbox gets no signal at all.
+   */
+  const ip = clientIp(await headers());
+  if (await isLimited("resetIp", ip)) {
+    return fail("Too many reset requests. Wait a while and try again.");
+  }
+  if (await isLimited("resetEmail", parsed.data.email)) {
+    return { ok: true, delivery: "sent" };
+  }
+  await record("resetIp", ip);
+  await record("resetEmail", parsed.data.email);
+
   const user = await prisma.user.findUnique({ where: { email: parsed.data.email }, select: { id: true } });
   if (!user) return { ok: true, delivery: "sent" };
 
@@ -280,14 +339,10 @@ export async function requestPasswordReset(
   });
 
   const link = parsed.data.origin + "/reset?token=" + token;
-  const delivery = await deliver({
-    to: parsed.data.email,
-    subject: "Set a new Citrus Writing password",
-    text:
-      "Someone asked to reset the password on your Citrus Writing account.\n\n" +
-      link +
-      "\n\nThe link works once and expires in thirty minutes. If this was not you, nothing has changed and you can ignore this.",
-  });
+  // The origin goes to the template too, not only into the link: a message sent from a preview
+  // deployment should point its mark and its footer at that deployment rather than at the live
+  // site, which is the one way to notice you tested the wrong one.
+  const delivery = await deliver({ to: parsed.data.email, ...passwordResetEmail(link, parsed.data.origin) });
 
   if (delivery.kind === "failed") return fail("The email could not be sent: " + delivery.reason + ".");
   return { ok: true, delivery: delivery.kind };

@@ -7,7 +7,8 @@ import { legalDetails, subprocessors } from "./details";
  * Written against what this codebase actually does, not against a template. Every factual claim
  * below is one someone could check by reading the source, and several are unusual enough to be
  * worth stating plainly: the analytics are cookieless and identify nobody, the fonts are
- * self-hosted so no request leaves for Google, session rows carry no IP address or user agent,
+ * self-hosted so no request leaves for Google, session rows carry no IP address or user agent
+ * (the abuse counters keep a salted one-way hash of one, briefly, and nothing else),
  * and the one cookie is strictly necessary — which is why this app shows no cookie banner and
  * does not need one.
  *
@@ -28,7 +29,7 @@ export const privacy: LegalDocument = {
   title: "Privacy Policy",
   summary: `What ${product} stores about you, why, who else sees it, and how to get it back or get rid of it.`,
   footerLabel: "Privacy",
-  updated: "2026-09-12",
+  updated: "2026-09-13",
 
   gist: [
     "Your fiction is yours. It is never used to train a model, never sold, and never shown to anyone you have not shown it to.",
@@ -81,7 +82,7 @@ export const privacy: LegalDocument = {
           },
         },
         {
-          note: "What we do not collect is worth saying too. No IP address is written to your session record, no device fingerprint, no browsing history across other sites, no location, and nothing about you bought from a data broker.",
+          note: "What we do not collect is worth saying too. No IP address is written to your session record, no device fingerprint, no browsing history across other sites, no location, and nothing about you bought from a data broker. There is one narrow exception, described under *Stopping abuse* below, and it is deliberately not a record of you.",
         },
       ],
     },
@@ -156,6 +157,17 @@ export const privacy: LegalDocument = {
         "What it records is the page address, the site that linked you here if one did, the country your request appears to come from, and the broad kind of browser, operating system and screen you used. Your IP address is used to work out the country and is then discarded — it is never written down.",
         "Two things worth saying plainly because they are unusual. Plausible's servers are in the European Union, which makes it the one company in our list that does not move your information to the United States. And the lawful basis is our legitimate interest in knowing whether the thing we built is being used — a basis you can object to, at the address in *Your rights* below, and we will honour it.",
         "If your browser sends a Do Not Track signal, or you run an ad blocker or content blocker, this script does not load and you are not counted. We have not tried to work around that and will not.",
+      ],
+    },
+
+    {
+      id: "abuse",
+      heading: "Stopping abuse",
+      blocks: [
+        "Sign-in, sign-up and the password-reset form all count how often they are used, and refuse once a reasonable number is exceeded — ten failed sign-ins for one address in a quarter of an hour, three reset emails to one address in an hour, and similar limits for the connection making the requests.",
+        "This is the only place the app uses your IP address for anything, so it is worth being exact about what happens to it. **We never write the address down.** What is stored is a one-way hash of it, mixed with a secret, alongside a number and an expiry — and nothing else. There is no account attached, no page, no time of day beyond the window itself, and the row deletes itself when the window ends.",
+        "The secret is what makes that honest rather than decorative. An IPv4 address is a short number, so a plain hash of one could be reversed by simply trying every address; mixing in a secret first means the stored value can be counted against and cannot be turned back into an address by us or by anyone who obtained a copy of the table.",
+        "Why we do it: without it, a password can be guessed at indefinitely, and the reset form can be pointed at someone else's inbox and fired as often as an attacker likes. The lawful basis is our legitimate interest in keeping accounts from being broken into and inboxes from being buried — and in the second case it protects a person who is not even our customer.",
       ],
     },
 
