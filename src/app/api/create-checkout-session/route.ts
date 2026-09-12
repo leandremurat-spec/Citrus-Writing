@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { authorize } from "@/lib/auth/guard";
 import { createCheckoutSession, isConfigured, priceIdFor } from "@/lib/billing/stripe";
+import { originFrom } from "@/lib/http/origin";
 
 /**
  * Mints the embedded Checkout Session and hands back its `client_secret`.
@@ -47,9 +48,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Payments are not set up yet. Nothing was charged." }, { status: 503 });
   }
 
-  const store = await headers();
-  const host = store.get("x-forwarded-host") ?? store.get("host");
-  const proto = store.get("x-forwarded-proto") ?? (process.env.NODE_ENV === "production" ? "https" : "http");
+  const requestOrigin = originFrom(await headers());
 
   try {
     const session = await createCheckoutSession({
@@ -60,7 +59,7 @@ export async function POST(request: Request) {
       // Only tells the account page to say thank you. The plan itself is granted by the
       // webhook, because a browser arriving here proves nothing about whether the payment
       // cleared.
-      returnUrl: proto + "://" + host + "/account?upgraded=1",
+      returnUrl: requestOrigin + "/account?upgraded=1",
     });
     return NextResponse.json({ client_secret: session.client_secret });
   } catch (error) {

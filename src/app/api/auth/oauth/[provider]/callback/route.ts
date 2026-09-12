@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { originFrom } from "@/lib/http/origin";
 
 import { linkOrCreateUser } from "@/lib/auth/link-account";
 import { fetchProfile, isProviderId, providerConfig, statesMatch } from "@/lib/auth/oauth";
@@ -21,7 +22,10 @@ function backToSignIn(origin: string, reason: string) {
 
 export async function GET(request: Request, context: { params: Promise<{ provider: string }> }) {
   const url = new URL(request.url);
-  const origin = url.origin;
+  // The forwarded headers, not url.origin — see lib/http/origin.ts. The token exchange replays
+  // this redirect_uri and the provider compares it to the one the flow started with, so the two
+  // must agree exactly; url.origin would be the internal localhost on both counts.
+  const origin = originFrom(request.headers);
 
   const { provider } = await context.params;
   if (!isProviderId(provider)) return new NextResponse("Unknown provider", { status: 404 });

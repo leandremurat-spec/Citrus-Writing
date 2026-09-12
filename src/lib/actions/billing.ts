@@ -7,6 +7,7 @@ import { z } from "zod";
 import { fail, type ActionResult } from "@/lib/actions/result";
 import { authorize } from "@/lib/auth/guard";
 import { createPortalSession, isConfigured, priceIdFor } from "@/lib/billing/stripe";
+import { originFrom } from "@/lib/http/origin";
 import { prisma } from "@/lib/db";
 
 /**
@@ -26,10 +27,7 @@ import { prisma } from "@/lib/db";
 /** The app's own origin, taken from the request rather than an environment variable, so the
     Stripe return URLs are right on localhost, on a preview deploy and in production alike. */
 async function origin(): Promise<string> {
-  const store = await headers();
-  const host = store.get("x-forwarded-host") ?? store.get("host");
-  const proto = store.get("x-forwarded-proto") ?? (process.env.NODE_ENV === "production" ? "https" : "http");
-  return proto + "://" + host;
+  return originFrom(await headers());
 }
 
 const checkoutSchema = z.object({ interval: z.enum(["monthly", "yearly"]) });

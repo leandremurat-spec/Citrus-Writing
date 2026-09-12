@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { buildAuthorizationUrl, isProviderId, providerConfig } from "@/lib/auth/oauth";
+import { originFrom } from "@/lib/http/origin";
 
 /**
  * Starts a provider sign-in.
@@ -13,6 +14,11 @@ import { buildAuthorizationUrl, isProviderId, providerConfig } from "@/lib/auth/
  * The origin comes from the incoming request rather than an environment variable, so the
  * redirect_uri is right on localhost, on a preview URL and in production without a third
  * place to keep in sync. It is only ever used to build a URL back to this same app.
+ *
+ * It comes from the *forwarded* headers, not from `request.url`. Behind Railway's router
+ * `request.url` is the internal `http://localhost:8080/…`, and sending that as a redirect_uri
+ * is what put the provider's final hop on a localhost the writer's browser could not reach.
+ * See `lib/http/origin.ts`.
  */
 export const dynamic = "force-dynamic";
 
@@ -27,7 +33,7 @@ export async function GET(request: Request, context: { params: Promise<{ provide
   // this endpoint has nothing to redirect to and the button for it is never rendered either.
   if (!config) return new NextResponse("That sign-in method is not configured.", { status: 404 });
 
-  const origin = new URL(request.url).origin;
+  const origin = originFrom(request.headers);
   const { url, state, verifier } = buildAuthorizationUrl(config, origin);
 
   const nextPath = new URL(request.url).searchParams.get("next");

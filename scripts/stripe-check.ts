@@ -103,6 +103,7 @@ async function stripe(path: string): Promise<{ ok: boolean; body: Record<string,
 interface StripePrice {
   unit_amount?: number;
   currency?: string;
+  currency_options?: Record<string, { unit_amount?: number }>;
   active?: boolean;
   recurring?: { interval?: string };
   product?: string;
@@ -129,7 +130,9 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const { ok, body } = await stripe("/prices/" + slot.id);
+    // currency_options is not returned unless asked for, and it is the whole point of the
+    // multi-currency check below.
+    const { ok, body } = await stripe("/prices/" + slot.id + "?expand[]=currency_options");
     const price = body as StripePrice;
 
     if (!ok) {
@@ -161,6 +164,29 @@ async function main(): Promise<void> {
       );
     }
 
+    /*
+     * Multi-currency prices are a Stripe feature the app has no idea about.
+     *
+     * `currency_options` lets one price charge a different amount per currency, and Checkout
+     * picks by the customer's location. That is invisible to `plans.ts`, which holds a single
+     * figure — so a Canadian writer can read "$6 a month" on the pricing page, tick a box
+     * saying "Charged in US dollars", and be charged CAD 8.00. The page, the checkout
+     * disclosure and the refund policy are then all wrong at once, for that customer only.
+     *
+     * Reported rather than fatal: it is a deliberate Stripe setting and might be intended. But
+     * it cannot be *silent*, because the only place it shows up otherwise is a real receipt.
+     */
+    const options = price.currency_options ?? {};
+    const extra = Object.keys(options).filter((code) => code !== price.currency);
+    if (extra.length > 0) {
+      warnings.push(
+        `${slot.label} also charges ${extra
+          .map((code) => `${((options[code].unit_amount ?? 0) / 100).toFixed(2)} ${code.toUpperCase()}`)
+          .join(", ")} — plans.ts knows only ${((price.unit_amount ?? 0) / 100).toFixed(2)} ` +
+          `${(price.currency ?? "").toUpperCase()}, and the checkout disclosure says the charge is in US dollars.`,
+      );
+    }
+
     if (price.currency) currencies.add(price.currency);
 
     notes.push(
@@ -171,6 +197,53 @@ async function main(): Promise<void> {
 
   if (currencies.size > 1) {
     failures.push(`The two prices are in different currencies (${[...currencies].join(", ")}).`);
+  }
+
+  /* --------------------------------------------------------------------------- webhook --- */
+
+  /*
+   * The check that would have caught the worst failure this app has had.
+   *
+   * A webhook registered at the site root instead of `/api/stripe/webhook` takes every payment
+   * and grants nothing: Stripe posts the event to a page that does not handle it, the app never
+   * learns the payment cleared, and the writer is billed while staying on the free plan. Every
+   * other signal looks healthy — the session completes, the subscription is active, the money
+   * arrives — so nothing surfaces it until someone says "I paid and nothing happened".
+   */
+  const endpoints = await stripe("/webhook_endpoints?limit=20");
+  const list = (endpoints.body.data as Record<string, unknown>[] | undefined) ?? [];
+  const WANT_PATH = "/api/stripe/webhook";
+  const REQUIRED = [
+    "checkout.session.completed",
+    "customer.subscription.created",
+    "customer.subscription.updated",
+    "customer.subscription.deleted",
+  ];
+
+  const pointing = list.filter((e) => String(e.url ?? "").endsWith(WANT_PATH));
+
+  if (list.length === 0) {
+    failures.push(
+      `No webhook endpoint is registered in ${secretMode} mode. Payments will be taken and no plan granted.`,
+    );
+  } else if (pointing.length === 0) {
+    failures.push(
+      `No webhook endpoint points at ${WANT_PATH} — found ${list
+        .map((e) => String(e.url))
+        .join(", ")}. Payments will be taken and no plan granted.`,
+    );
+  } else {
+    for (const endpoint of pointing) {
+      if (endpoint.status !== "enabled") {
+        failures.push(`The webhook at ${String(endpoint.url)} is ${String(endpoint.status)}, not enabled.`);
+      }
+      const enabled = (endpoint.enabled_events as string[] | undefined) ?? [];
+      const missing = enabled.includes("*") ? [] : REQUIRED.filter((event) => !enabled.includes(event));
+      if (missing.length > 0) {
+        failures.push(`The webhook at ${String(endpoint.url)} is not subscribed to: ${missing.join(", ")}.`);
+      }
+      notes.push("webhook  " + String(endpoint.url));
+    }
   }
 
   /* ----------------------------------------------------------------------------- promo --- */

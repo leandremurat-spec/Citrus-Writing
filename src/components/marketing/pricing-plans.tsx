@@ -68,8 +68,12 @@ export function PricingPlans({
   // Only worth showing to someone who could actually redeem it: the Stripe code is restricted
   // to first-time customers, so advertising it to an existing subscriber is an offer they
   // would be refused at the till.
+  //
+  // The test is "not already on Serial", not "signed out". A writer on the free plan is signed
+  // in *and* eligible — they are the single likeliest person to use this — and gating on
+  // `!currentPlan` hid the offer from exactly them while showing it to anonymous visitors.
   const offer =
-    promo && !currentPlan
+    promo && currentPlan !== "SERIAL"
       ? {
           code: promo.code,
           first: formatPrice(firstChargeCents(promo, interval)),
