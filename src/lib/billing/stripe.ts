@@ -120,19 +120,18 @@ export async function createCheckoutSession(options: {
 }): Promise<CheckoutSession> {
   return call<CheckoutSession>("/checkout/sessions", {
     // ---------------------------------------------- configured in Checkout Studio
+    //
+    // Studio now configures this integration as the embedded form it already was, so `ui_mode`
+    // no longer needs an argument made for it here. `payment_method_collection` stays because
+    // the mode is `subscription`, which is the only mode Stripe applies it in.
     ui_mode: "form",
     billing_address_collection: "auto",
     phone_number_collection: { enabled: false },
     automatic_tax: { enabled: false },
     payment_method_collection: "always",
     submit_type: "auto",
-    // `required` has no effect under `ui_mode: "form"` and Stripe rejects the request outright
-    // if it is present — confirmed against a live test-mode call. `enabled: true` alone is the
-    // most that Studio's setting can mean here; whether the field is required is not
-    // configurable for the embedded form.
-    tax_id_collection: { enabled: true },
     saved_payment_method_options: { payment_method_save: "enabled" },
-    integration_identifier: "custom_embedded_web_0001",
+    integration_identifier: "custom_embedded_web_0002",
 
     // ------------------------------------------------------- what is being sold
     mode: "subscription",

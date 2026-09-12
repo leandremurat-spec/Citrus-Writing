@@ -55,23 +55,43 @@ declare global {
   }
 }
 
-/** Configured in Checkout Studio. Change it there rather than here. */
-const appearance = {
-  theme: "stripe",
-  labels: "auto",
-  inputs: "spaced",
+/**
+ * Configured in Checkout Studio — one appearance per mode.
+ *
+ * The form is a Stripe-hosted iframe, so it cannot inherit this app's palette the way every
+ * other surface does; the appearance has to be chosen before the SDK is built. Everything
+ * except `theme` is identical between the two, so this is Studio's one configuration with its
+ * theme swapped, not two designs that can drift apart.
+ *
+ * It has to be per mode because `labels: "above"` places the section headings *outside* the
+ * fields, on the checkout card — which is `bg-neutral-100`, cream in light and near-black in
+ * dark. Measured on the real grounds: `night` renders those headings near-white, which is
+ * 15:1 on the dark card and 1.1:1 on the light one, where they simply vanish. The fields
+ * themselves are legible either way, which is what made the failure easy to miss.
+ */
+const APPEARANCE = {
+  labels: "above",
+  inputs: "condensed",
   variables: {
-    borderRadius: "4px",
-    colorBackground: "#ffffff",
-    colorDanger: "#df1b41",
-    colorPrimary: "#ed930a",
-    colorSuccess: "#a7d463",
-    colorText: "#17120e",
-    fontFamily: "Lora",
+    borderRadius: "24px",
+    colorPrimary: "#ee9013",
+    colorSuccess: "#00c853",
+    fontFamily: '"Segoe UI"',
     fontSizeBase: "16px",
-    spacingUnit: "4px",
+    spacingUnit: "8px",
   },
-};
+} as const;
+
+/**
+ * Read once, when the form is built. It deliberately does not follow a later theme change:
+ * rebuilding the SDK would unmount a payment form someone may be halfway through filling in,
+ * and losing a half-typed card number is worse than a form that does not match the chrome.
+ */
+function appearanceForCurrentTheme() {
+  const dark =
+    typeof document !== "undefined" && document.documentElement.classList.contains("dark");
+  return { ...APPEARANCE, theme: dark ? "night" : "flat" };
+}
 
 export function CheckoutForm({ interval }: { interval: BillingInterval }) {
   const [error, setError] = React.useState<string | null>(null);
@@ -131,7 +151,10 @@ export function CheckoutForm({ interval }: { interval: BillingInterval }) {
       });
 
     try {
-      const checkout = stripe.initCheckoutFormSdk({ clientSecret, appearance });
+      const checkout = stripe.initCheckoutFormSdk({
+        clientSecret,
+        appearance: appearanceForCurrentTheme(),
+      });
 
       const form = checkout.createForm({ layout: "expanded" });
       form.mount("#checkout-form");
