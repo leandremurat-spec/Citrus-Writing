@@ -24,7 +24,8 @@
     "stripe:check": "node node_modules/tsx/dist/cli.mjs scripts/stripe-check.ts",
     "theme:build": "node node_modules/tsx/dist/cli.mjs scripts/build-theme-css.ts",
     "theme:check": "node node_modules/tsx/dist/cli.mjs scripts/theme-check.ts",
-    "legal:check": "node node_modules/tsx/dist/cli.mjs scripts/legal-check.ts"
+    "legal:check": "node node_modules/tsx/dist/cli.mjs scripts/legal-check.ts",
+    "mail:preview": "node node_modules/tsx/dist/cli.mjs scripts/mail-preview.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

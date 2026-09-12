@@ -17,11 +17,19 @@ import "server-only";
 
 export type Delivery = { kind: "sent" } | { kind: "logged"; reason: string } | { kind: "failed"; reason: string };
 
-interface Message {
+export interface Message {
   to: string;
   subject: string;
-  /** Plain text only. There is one message, it is four lines long, and it is a link. */
+  /**
+   * The plain-text body, and it is not optional.
+   *
+   * Sending HTML alone is how a message lands in spam and how it arrives blank in a client that
+   * refuses to render it. Both bodies come out of `lib/mail/messages.ts`, built from one
+   * description of the message, so they cannot describe different emails.
+   */
   text: string;
+  /** The HTML body. Omitted, the message goes out as text alone, which still works. */
+  html?: string;
 }
 
 const FROM = process.env.MAIL_FROM ?? "Citrus Writing <onboarding@resend.dev>";
@@ -44,7 +52,13 @@ export async function deliver(message: Message): Promise<Delivery> {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { authorization: "Bearer " + key, "content-type": "application/json" },
-      body: JSON.stringify({ from: FROM, to: [message.to], subject: message.subject, text: message.text }),
+      body: JSON.stringify({
+        from: FROM,
+        to: [message.to],
+        subject: message.subject,
+        text: message.text,
+        ...(message.html ? { html: message.html } : {}),
+      }),
     });
     if (!response.ok) {
       const detail = await response.text().catch(() => "");

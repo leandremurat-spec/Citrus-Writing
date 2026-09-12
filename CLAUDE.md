@@ -59,6 +59,7 @@ Citrus Writing** and **The Citrus Writing overhaul** below, shipped across the s
 | Prisma Studio | `npm run db:studio` |
 | DB smoke test | `npm run db:smoke` |
 | Export engine checks | `npm run export:check` (runs a fixture through HTML and Markdown and asserts the output is clean; no dev server needed) |
+| Preview the emails | `npm run mail:preview` (renders every message to `.mail-preview/`, light and dark, prints the plain-text halves, and asserts escaping and contrast; no dev server needed) |
 | Rebuild the palette CSS | `npm run theme:build` (writes `src/app/palettes.css` from `src/lib/theme/palettes.ts`; also runs ahead of `dev` and `build`, so it cannot be stale in either) |
 | Audit the palettes | `npm run theme:check` (contrast across all eight modes, and fails if the generated CSS is stale; no dev server needed) |
 | Inspect the database | `npm run db:inspect` (read-only: novels, chapter word counts and previews, writing sessions) |
@@ -1389,6 +1390,52 @@ writer waiting for mail that was never coming.
 
 Reset tokens are hashed like session tokens, single-use, thirty minutes. Redeeming one drops
 every other outstanding link *and every session*, which is the whole point of a reset.
+
+### The email template
+
+`src/lib/mail/template.ts` is the shell — a Citrus Writing message rendered to **HTML and plain
+text from one `EmailContent` object**, because written as two templates they drift and it is
+always the text half that rots. `messages.ts` holds the words: `passwordResetEmail` (wired) and
+`supportConfirmationEmail` (see below). `send.ts` passes both bodies to Resend; HTML alone is
+how a message lands in spam and arrives blank in a client that will not render it.
+
+Four things worth knowing before editing it:
+
+- **The hexes are literal, and that is the one sanctioned exception to "colour values live in
+  `palettes.ts`".** An inbox cannot read a custom property, `palettes.css` never reaches it, and
+  an email must not change colour because someone retuned a rung and never opened a mail client
+  to check. `EMAIL_PALETTE` is Citrus light and Citrus dark, flattened, in one place. This is a
+  different judgement from the UI inspector's exception, which is about *not* being painted in
+  the palette it measures.
+- **Tables, inline styles, and a `<style>` block that is expendable.** Only the narrow-screen
+  rules and the dark-mode overrides live in the block; a client that strips it shows the light
+  palette at 560px, which is a legible email rather than a broken one. Every dark rule carries
+  `!important` because it is overriding the inline style on the same element — the only way
+  inline-styled email has a dark mode at all.
+- **No webfont, and no tracking pixel.** Caprasimo and Figtree are self-hosted, which the
+  privacy policy says out loud; Georgia carries the display line instead. A 1×1 image is
+  analytics, and the policy says there is none.
+- **A note has two tones, and the distinction is whose words they are.** `note` is the sage
+  panel — the app speaking, set apart because it matters. `quote` is neutral, for the reader's
+  own text echoed back. Dressing a stranger's message in the brand accent is precisely what a
+  support confirmation must not do. The echo is also the only place in the app where arbitrary
+  user text is written into markup by hand, so `escapeHtml` covers every interpolation and
+  `safeUrl` neutralises any href that is not http(s) or mailto.
+
+`npm run mail:preview` renders every message to `.mail-preview/` (light *and* a forced-dark
+copy, since a browser will not honour `prefers-color-scheme` on a local file), prints the
+plain-text halves so the half nobody reads is unavoidable, and asserts what a browser cannot:
+that echoed markup is escaped, that the text copy is *not* escaped, that every href is
+absolute, that each message states why it arrived — and **22 text pairings at 4.5:1, worst
+5.53:1**. Those pairings deliberately do not go in `scripts/theme-check.ts`: that audits
+`palettes.ts` across eight modes, and these are values it does not own.
+
+**`supportConfirmationEmail` has no caller.** There is no contact form and no support route
+yet; it is written and ready for one. Two conditions before wiring it up — a person must
+actually read the other end, and `SUPPORT_REPLY_PROMISE` must be made true, because it is the
+one sentence in that file that is a commitment rather than a description. Shipping a
+confirmation the software cannot honour is the same shape of mistake as the `notifyStale`
+consent collected for an email nobody sends.
 
 ### `?next=` is validated
 
