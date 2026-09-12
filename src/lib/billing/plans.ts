@@ -79,12 +79,21 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     id: "SERIAL",
     name: "Serial",
     tagline: "For anyone posting on a schedule.",
-    // $9 monthly, $84 yearly — $7 a month, which is the figure the pricing design puts in
-    // 44px type. The design's badge said "two months free", which these numbers do not make
-    // true ($108 − $84 is nearer two and a half); the badge states the saving in dollars
-    // instead. Keeping the headline price and fixing the claim beats the other way round.
-    monthlyCents: 900,
-    yearlyCents: 8400,
+    // $6 monthly, $48 yearly — $4 a month, which is the figure the pricing card puts in 44px
+    // type. Launch pricing, down from $9/$84: a serial writer choosing a tool for the next few
+    // years is weighing a subscription against a text editor that costs nothing, and the first
+    // hundred of them are worth more than the margin.
+    //
+    // The yearly deal is now exactly four months free — $72 over a year at the monthly rate
+    // against $48 — so the badge's saving figure lands on a round $24 either way. That is
+    // arithmetic rather than design: `yearlySavingCents` derives it, and the badge has never
+    // held a number of its own.
+    //
+    // **Changing these means changing Stripe, and the two are checked against each other.**
+    // `npm run stripe:check` fails when a price here disagrees with the price actually charged,
+    // because the pricing page and the refund policy both quote this file.
+    monthlyCents: 600,
+    yearlyCents: 4800,
     capabilities: {
       maxNovels: null,
       snapshotsPerChapter: null,

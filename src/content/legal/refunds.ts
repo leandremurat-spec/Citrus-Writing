@@ -41,7 +41,7 @@ export const refunds: LegalDocument = {
   title: "Refund and Subscription Policy",
   summary: "What Serial costs, how it renews, how to stop it, and when money does and does not come back.",
   footerLabel: "Refunds",
-  updated: "2026-09-11",
+  updated: "2026-09-12",
 
   gist: [
     "Serial renews automatically until you cancel. Cancel any day, in two clicks, from your account page.",
