@@ -9,6 +9,7 @@ import {
   ThemeProvider,
 } from "@/components/workspace/theme-provider";
 import { UiInspector } from "@/components/workspace/ui-inspector";
+import { legalDetails } from "@/content/legal/details";
 import { cn } from "@/lib/utils";
 
 import "./globals.css";
@@ -44,12 +45,50 @@ const sourceSerif4 = Source_Serif_4({
 });
 const ebGaramond = EB_Garamond({ subsets: ["latin"], variable: "--font-eb-garamond", display: "swap" });
 
+const SITE = legalDetails.siteUrl;
+
 export const metadata: Metadata = {
+  /*
+   * Without metadataBase, every relative URL Next generates for a share card resolves against
+   * nothing and the card arrives with no image. It is the one line that makes the rest of this
+   * block work, and the one most easily left out, because nothing on the site itself looks
+   * wrong when it is missing.
+   *
+   * It reads from the legal details rather than an environment variable so that the address in
+   * the Terms and the address in a share card cannot become two different claims.
+   */
+  metadataBase: new URL(SITE),
   title: {
     default: "Citrus Writing",
     template: "%s · Citrus Writing",
   },
   description: "A writing and publishing workspace built for webnovel and serial fiction authors.",
+  applicationName: "Citrus Writing",
+  /*
+   * The share card. Every per-page `metadata` export inherits these and overrides only what it
+   * names, so a link to /pricing carries its own title and this image.
+   *
+   * `opengraph-image.tsx` beside this file supplies the picture; Next fills in the url, type
+   * and dimensions from it, which is why none of them are written here.
+   */
+  openGraph: {
+    type: "website",
+    siteName: "Citrus Writing",
+    locale: "en_CA",
+    url: SITE,
+    title: "Citrus Writing — a workspace for webauthors",
+    description:
+      "Write the next one, stay ahead of the last. A workspace built for webnovels and serials: chapters, arcs, a release buffer and a codex that keeps your cast straight.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Citrus Writing — a workspace for webauthors",
+    description:
+      "Write the next one, stay ahead of the last. A workspace built for webnovels and serials.",
+  },
+  // The writing surfaces are all behind sign-in and already unreachable to a crawler; this says
+  // so explicitly for the marketing pages' sake, which are the ones meant to be indexed.
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

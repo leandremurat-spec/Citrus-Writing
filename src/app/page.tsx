@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { StructuredData } from "@/components/marketing/structured-data";
 
 import { getCurrentUser } from "@/lib/auth/session";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,7 @@ export default async function LandingPage() {
 
   return (
     <div className="min-h-dvh bg-background text-foreground [text-wrap:pretty]">
+      <StructuredData />
       <MarketingNav
         user={user}
         links={[
