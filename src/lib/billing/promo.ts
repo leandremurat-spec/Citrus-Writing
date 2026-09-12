@@ -45,15 +45,23 @@ export interface LaunchPromo {
 }
 
 /**
- * 1 October – 31 December 2026, Montreal time.
+ * 12 September – 31 December 2026, Montreal time.
  *
  * The two offsets differ on purpose: the window opens in EDT (UTC−4) and closes in EST (UTC−5),
  * because North American DST ends on 1 November.
+ *
+ * `opensAt` is in the past, so the offer is running. That is the deliberate shape for a launch
+ * rather than a dated campaign — there is nothing to switch on, and the only date that still has
+ * to be honoured is the closing one, which `expires_at` on the Stripe code enforces by itself.
+ *
+ * The code names its own rate. `WELCOME30` gives 30%, and if that rate ever changes the string
+ * has to change with it — a code reading WELCOME50 that takes 30% off is a number the customer
+ * was shown and did not get, which is the kind of small dishonesty that costs more than it saves.
  */
 export const LAUNCH_PROMO: LaunchPromo = {
-  code: "WELCOME50",
-  percentOff: 50,
-  opensAt: "2026-10-01T04:00:00Z",
+  code: "WELCOME30",
+  percentOff: 30,
+  opensAt: "2026-09-12T04:00:00Z",
   closesAt: "2027-01-01T04:59:59Z",
   newCustomersOnly: true,
 };

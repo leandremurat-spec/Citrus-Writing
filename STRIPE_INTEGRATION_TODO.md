@@ -290,52 +290,36 @@ So with a code applied the block now reads "**$42.00 for your first year**, then
 year", and the renewal row adds that the discount covers the first year only. This is why the
 promotion field and the disclosure had to ship together rather than one then the other.
 
-### The window: 1 October – 31 December 2026
+### Live now, to 31 December 2026
 
-Three months, Montreal time. `expires_at` is set to **2027-01-01T04:59:59Z**, which is
-31 December 23:59:59 EST. The offset is not a typo — the window opens in EDT (UTC−4) and closes
-in EST (UTC−5), because North American DST ends on 1 November.
+**`WELCOME30` — 30% off the first charge, new customers only.**
 
-**Stripe promotion codes have no start date.** There is an `expires_at` and nothing that says
-"activates on". So the code is created with `active: false` and has to be switched on when the
-promotion opens. Verified rather than assumed — applying it in its current state returns
-`type: "error"`, "This promotion code is invalid.", and the discount stays at $0.00. Nobody can
-redeem it early.
+| | first charge | then |
+|---|---|---|
+| Yearly | **$33.60** | $48 a year |
+| Monthly | **$4.20** | $6 a month |
 
-That leaves two ways to run it, and the second is less to remember:
-
-1. **Pre-stage it** (what test mode is doing now): create it inactive, then flip `active=true` on
-   1 October. One switch to forget.
-2. **Create it on the day**, already active with the same `expires_at`. Nothing to flip, nothing
-   to remember, and the expiry still closes it on its own.
-
-Either way the *closing* is automatic. Only the opening needs a person.
-
-### The Stripe objects
-
-**Test mode only** — live mode is a separate ledger and needs its own copies.
+The live objects, created 12 September 2026:
 
 | | |
 |---|---|
-| Coupon | `fDk6D8Ol` — 50% off, `duration: once`, restricted to the Serial product |
-| Promotion code | `WELCOME50` — `first_time_transaction: true`, inactive, expires 31 Dec 2026 |
+| Coupon | `JwTmRcJ6` — 30% off, `duration: once`, scoped to `prod_VF8FUDY5Tfq5LG` |
+| Promotion code | `WELCOME30` — active, `first_time_transaction`, expires 31 Dec 2026 |
 
-`duration: "once"` means the first *invoice*, which on an annual plan is the first year. On the
-monthly plan the same coupon would discount one month, which is why it is restricted to the
-product rather than left open.
+`expires_at` is `1798779599` — 31 December 23:59:59 Montreal. Note the offsets differ across the
+window: it opened in EDT (UTC−4) and closes in EST (UTC−5), because DST ends on 1 November.
 
-**The API shape has changed and the docs you find first will be wrong.** On this account's
-version (`2026-08-26.dahlia`) `POST /v1/promotion_codes` rejects the long-standing `coupon`
-parameter outright. It now takes `promotion[type]=coupon` plus `promotion[coupon]`.
+**The code names its own rate.** If the 30% ever changes, the string changes with it: a code
+reading WELCOME50 that takes 30% off is a number the customer was shown and did not get.
 
-Three more things learned the hard way, all of which will cost an hour if rediscovered:
+**Stripe promotion codes have no start date** — only `expires_at`. That does not matter here
+because the offer opened immediately, and the closing enforces itself. It would matter for a
+dated campaign, which would have to be created inactive and switched on by hand.
 
-- **`expires_at` is create-only** on a promotion code. To change a window you deactivate and
-  recreate.
-- **A code string can be reused** once the old holder is deactivated, so `WELCOME50` survives a
-  recreate.
-- **A promotion code's `expires_at` may not be later than its coupon's `redeem_by`.** The coupon
-  above runs to March 2027, comfortably past the window, so it is a harmless backstop.
+**Order matters when opening one.** The Stripe objects come first, then `promo.ts`. Opening the
+window while the code does not exist puts a code on the pricing page that Stripe rejects —
+`stripe:check` treats exactly that as fatal rather than a warning, and blocked this change until
+the coupon existed.
 
 ### Creating it in live mode
 
@@ -383,162 +367,13 @@ Two decisions inside that:
 Boundaries are tested: inactive one second before it opens, active on the instant, active on the
 final second, inactive one second later.
 
-### Before the code goes out
+### Kept current
 
-- [ ] Create both objects in **live** mode.
-- [ ] Put 1 October in a calendar if you pre-stage it. An inactive code fails silently from the
-      customer's side — they see "invalid", not "not yet".
-- [ ] Decide whether the pricing page mentions the code during the window. Nothing surfaces it
-      today; a writer has to be told it exists.
-- [ ] If the code is advertised with an end date, honour that date. A stated expiry is a
-      representation to the consumer, and Quebec's CPA is strict about it.
+- [x] Live coupon and code created.
+- [x] Prices reconciled — `plans.ts` matches Stripe at $6 / $48.
+- [ ] `STRIPE_PRICE_SERIAL_MONTHLY` must be `price_1UEyJ8RNAvYg7P922Q3YwX7q` in **both** `.env`
+      and Railway. Consolidating the two products onto one created a new monthly price and
+      archived the old; the old id is what both still carried.
+- [ ] Run `npm run stripe:check` after any Stripe change. It has now caught two live breakages
+      that nothing else would have: a price id from the wrong ledger, and this archived one.
 
-## `npm run stripe:check`
-
-Run it before a deploy, and after changing any Stripe variable.
-
-```bash
-npm run stripe:check
-```
-
-It exists because live checkout broke once with `No such price`, and nothing caught it until
-someone tried to pay and a server log was read by hand. **Stripe's test and live modes are
-separate ledgers**, so a price id created in one is simply absent in the other — and every
-symptom before the moment of payment looked healthy: the build passed, the page rendered, the
-route guarded correctly, the form mounted.
-
-What it asserts:
-
-| | |
-|---|---|
-| Key modes agree | A `sk_live_` secret with a `pk_test_` publishable fails later and far more confusingly than a missing key. |
-| Every price resolves | Against the configured key, naming the mode — because "No such price" alone sends people hunting for a typo rather than for the other ledger. |
-| Prices match `plans.ts` | The pricing page *and* the refund policy quote that file, so a mismatch is a price we state and do not charge. |
-| Intervals are right | The monthly slot recurs monthly; the yearly slot yearly. |
-| One currency | Two prices in different currencies is a pricing page that cannot add up. |
-| The webhook secret exists | Without it every webhook is rejected and no plan is ever granted. |
-| `promo.ts` matches Stripe | The code exists, its expiry matches the declared window, and the percentage matches. Fatal while the offer is open, a warning before it — the objects may legitimately not exist yet. |
-
-Three deliberate limits:
-
-- **It never prints a secret.** Keys are reported by mode only. A check you cannot paste into a
-  CI log is a check nobody runs.
-- **It is not in `npm run build`.** It needs the network and a real key; a build failing because
-  Stripe is unreachable would be a worse problem than the one it prevents. `legal:check` is in
-  the build because it is offline and deterministic.
-- **No key exits clean.** Running without `STRIPE_SECRET_KEY` is supported — the upgrade path
-  switches the plan directly, and is refused in production.
-
-## Going live
-
-Everything below is configuration and account setup — **no further code changes are required**
-to take payments. Verified locally before writing this: `npm run build`, `typecheck`, `lint`,
-`theme:check` (624 pairings), `export:check` and `legal:check` all pass.
-
-### 0. The domain — settled, and already live
-
-**`citruswritinglab.com`**, which is what
-[`src/content/legal/details.ts`](src/content/legal/details.ts) already declares as `siteUrl`, so
-the Terms, Privacy Policy and Refund Policy name the right service. No change needed.
-
-It is already serving, through Cloudflare to Railway, on a valid Let's Encrypt certificate
-(TLSv1.3, correct SANs) with an http → https 301 and no mixed content. Two gaps found while
-checking, neither blocking a launch:
-
-- **`www.citruswritinglab.com` does not resolve** — anyone typing `www.` gets a DNS failure
-  rather than a redirect. Add the record.
-- **No security headers at all** — no HSTS, CSP, `X-Frame-Options`, `X-Content-Type-Options` or
-  `Referrer-Policy`. No browser calls this "not secure", but without HSTS the first request over
-  http is interceptable, which is worth closing on a site taking card payments.
-
-### 1. Activate the Stripe account
-
-Live keys do not exist until the account is activated — business details, and a bank account for
-payouts. The entity is Canadian (Montreal), so expect GST/QST questions; the refund policy
-already states that prices are USD and that Canadian customers are charged tax.
-
-### 2. Create the two live Prices
-
-**Test price IDs do not work in live mode** — they are separate objects in a separate ledger.
-Create a monthly and a yearly Price in live mode, and make the amounts match what
-[`src/lib/billing/plans.ts`](src/lib/billing/plans.ts) advertises. The pricing page *and* the
-refund policy both read their figures from that file, so a mismatch is not a stale label — it is
-a refund policy quoting a price you do not charge.
-
-### 3. Register the live webhook
-
-Endpoint `https://<domain>/api/stripe/webhook`, subscribed to the four events in the Webhook
-section above. Live mode issues its **own** signing secret — a test-mode `whsec_` will reject
-every live event with a 400.
-
-### 4. Set the live variables on Railway
-
-Project `believable-spirit`, service `Citrus-Writing`, production environment.
-
-| Variable | Value |
-|---|---|
-| `STRIPE_SECRET_KEY` | `sk_live_...` |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_live_...` |
-| `STRIPE_PRICE_SERIAL_MONTHLY` | live monthly Price id |
-| `STRIPE_PRICE_SERIAL_YEARLY` | live yearly Price id |
-| `STRIPE_WEBHOOK_SECRET` | `whsec_...` from the **live** endpoint |
-| `RESEND_API_KEY`, `MAIL_FROM` | otherwise password-reset links are only printed to the server log |
-
-**`NEXT_PUBLIC_` variables are inlined at build time, not read at runtime.** Changing the
-publishable key needs a *redeploy*, not a restart — setting it and restarting will silently keep
-serving the old key.
-
-### 5. Point the domain at Railway
-
-The service currently answers on `citrus-writing-production.up.railway.app`. Add `<domain>` as a
-custom domain and set the DNS record Railway asks for. Nothing in the app hardcodes a host — the
-checkout return URL is built from the request's own `x-forwarded-host` — so no code changes.
-
-### 6. OAuth redirect URIs, if you use them
-
-Only if `GOOGLE_CLIENT_ID`/`SECRET` or `GITHUB_CLIENT_ID`/`SECRET` are set. A provider missing
-either variable does not render a button and its route 404s, so this is optional. If used,
-register `https://<domain>/api/auth/oauth/google/callback` and the GitHub equivalent.
-
-### 7. Take one real payment, then refund it
-
-A live card, end to end: the plan should flip to Serial **from the webhook**, not from the
-browser returning. Then refund it from the Dashboard and confirm the account drops back. This
-exercises the one path no test-mode run can fully prove.
-
-### A safety property worth knowing
-
-Without `STRIPE_SECRET_KEY`, this app falls back to switching the plan directly — and **that
-fallback is refused in production**. A deploy that is missing its keys therefore fails the
-upgrade loudly instead of quietly handing out the paid plan.
-
-## Next steps
-
-- [x] ~~Contrast on the payment form~~ — resolved by making the appearance per mode.
-- [x] ~~The app's typeface in the form~~ — `"Segoe UI"` is a system font, so it needs no `fonts`
-      option and makes no external request.
-- [ ] *Latent, not scheduled.* The webhook's `checkout.session.completed` handler opens with
-      `if (!session.subscription) break;`, so a `mode: "payment"` session would be acknowledged
-      and granted nothing. No such product exists — the $39 one-time was dropped in favour of the
-      launch discount — but anyone adding one must handle that branch or the money arrives with
-      no plan attached.
-- [ ] Decide whether `allow_promotion_codes` should come back (see "Removed" above). If yes, set
-      it in Checkout Studio rather than by hand, so the next sync does not strip it again.
-      Relevant to any launch discount.
-- [ ] Confirm the **live-mode** price IDs. Test and live are separate ledgers — the two Serial
-      prices verified here ($9/month, $84/year, matching `lib/billing/plans.ts`) exist in test
-      mode; live mode needs its own.
-- [ ] Register the production webhook endpoint and put its `whsec_...` value in the deploy
-      environment.
-- [ ] `RESEND_API_KEY` and a verified sending domain. Without them the password-reset link is
-      only printed to the server log, which leaves a locked-out writer with no way back in.
-- [ ] Fulfilment beyond the plan grant (receipts, onboarding email) is not wired — the only mail
-      this app sends today is the password reset.
-
-## Resources
-
-- Stripe docs — https://docs.stripe.com
-- Stripe MCP — https://docs.stripe.com/mcp
-- Support — https://support.stripe.com
-- Prices in the Dashboard — https://dashboard.stripe.com/prices
-- Webhooks in the Dashboard — https://dashboard.stripe.com/workbench/webhooks
