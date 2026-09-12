@@ -1463,9 +1463,14 @@ Terms of Service, Privacy Policy and Refund and Subscription Policy, at `/legal/
 `/legal/privacy` and `/legal/refunds`, with an index at `/legal`. Written against what this
 codebase actually does rather than against a template — every factual claim in the privacy
 policy is one someone could check by reading the source, which is why it can say plainly that
-there is no analytics of any kind, that session rows carry no IP address, that the typefaces
-are self-hosted so no request leaves for Google, and that the one cookie is strictly necessary
-and therefore needs no banner.
+the analytics are cookieless and identify nobody, that session rows carry no IP address, that
+the typefaces are self-hosted so no request leaves for Google, and that the one cookie is
+strictly necessary and therefore needs no banner.
+
+That analytics clause read "there is no analytics of any kind" until Plausible was added, and
+it is the clearest example of why these documents are kept in the repo rather than in a CMS:
+the script tag and the sentence denying it are one commit apart in the same tree, so the
+sentence could not quietly outlive the fact. See **Analytics** below.
 
 Three documents, one renderer (`components/legal/legal-page.tsx`), one type
 (`content/legal/document.ts`). Content lives in `src/content/legal/` beside `site-copy.ts` and
@@ -1474,6 +1479,33 @@ follows its spirit — plain strings, no HTML — but with its own two-rule inli
 the second. Its contract is "one rule, and an unmatched star is a star", which is what makes
 `site-copy.ts` safe for a non-programmer to edit; giving that file a link syntax is giving it a
 new way to break the landing page.
+
+### Analytics
+
+Plausible, added 2026-09-12, and it is the only thing in the app that measures a visitor. The
+tag lives in the root layout behind `NODE_ENV === "production"` — on in a deploy, absent from a
+dev run, so a writer's own localhost clicking never lands in the numbers.
+
+It was chosen for what it does not do, and every one of those is load-bearing on a document:
+
+- **No cookie, and nothing stored on the device.** The session cookie stays the only one, so the
+  "strictly necessary, therefore no banner" position survives intact. A cookie-based tool would
+  have meant a consent banner on every page under UK/EU e-privacy and Law 25, plus the consent
+  state to carry it.
+- **No identifier of any kind**, persistent or hashed, so it cannot follow a reader between
+  visits or to another site, and it is never joined to an account.
+- **EU servers** — the one processor in the stack that is not a transfer to the United States,
+  which the privacy policy's **Where it goes** section now says explicitly.
+
+**The tag and the policy changed in the same commit, and that is the point.** The privacy policy
+had said, in as many words, that there was no analytics of any kind. Shipping the script without
+the sentence would have made the document false at the moment the script loaded. Four claims had
+to move: the gist line, the cookie section's "no analytics cookie", the "only third-party script
+is Stripe's" line (there are two now), and the transfers section. A fifth surface — this file —
+said it too.
+
+Basis is legitimate interest, objectable at the contact address. A Do Not Track signal or any
+content blocker prevents the script loading, and nothing works around that.
 
 ### Prices are read, never restated
 

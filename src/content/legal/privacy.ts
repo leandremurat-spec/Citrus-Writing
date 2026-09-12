@@ -6,9 +6,14 @@ import { legalDetails, subprocessors } from "./details";
  *
  * Written against what this codebase actually does, not against a template. Every factual claim
  * below is one someone could check by reading the source, and several are unusual enough to be
- * worth stating plainly: there is no analytics of any kind, the fonts are self-hosted so no
- * request leaves for Google, session rows carry no IP address or user agent, and the one cookie
- * is strictly necessary — which is why this app shows no cookie banner and does not need one.
+ * worth stating plainly: the analytics are cookieless and identify nobody, the fonts are
+ * self-hosted so no request leaves for Google, session rows carry no IP address or user agent,
+ * and the one cookie is strictly necessary — which is why this app shows no cookie banner and
+ * does not need one.
+ *
+ * That analytics sentence used to read "there is no analytics of any kind". It was true until
+ * Plausible was added, and the tag and this file had to change in the same breath: a policy
+ * that denies a measurement the page is taking is worse than one that never claimed anything.
  *
  * The rights section grants GDPR-grade rights to everybody rather than only to readers who
  * happen to live somewhere that mandates them. That is a deliberate choice for a product sold
@@ -23,11 +28,11 @@ export const privacy: LegalDocument = {
   title: "Privacy Policy",
   summary: `What ${product} stores about you, why, who else sees it, and how to get it back or get rid of it.`,
   footerLabel: "Privacy",
-  updated: "2026-09-11",
+  updated: "2026-09-12",
 
   gist: [
     "Your fiction is yours. It is never used to train a model, never sold, and never shown to anyone you have not shown it to.",
-    "There is no analytics, no advertising and no tracking in this app. Not a lighter version of it — none.",
+    "We count page views, and that is all. No advertising, no cross-site tracking, no profile of you, and nothing tied to your account.",
     "One cookie, and all it remembers is that you are signed in. That is why you were never asked to accept anything.",
     "You can export everything you have written at any time, and deleting your account really does delete it.",
     "We are in Montreal, and the servers holding your work are not — they are in the United States. Every company that touches it is named further down.",
@@ -135,15 +140,35 @@ export const privacy: LegalDocument = {
     },
 
     {
+      id: "analytics",
+      heading: "How we count visits",
+      blocks: [
+        "We use Plausible to count page views. It tells us which pages are looked at and roughly how many people looked at them, and that is the whole of it.",
+        "What it does not do is the reason it was chosen:",
+        {
+          list: [
+            "It sets no cookie and stores nothing on your device, so there is nothing here for you to consent to and no banner to click past.",
+            "It gives you no identifier — not a persistent one, not a hashed one — so it cannot follow you between visits, and it cannot follow you to any other site.",
+            "It builds no profile and runs no advertising. Nobody buys this data because we are not selling it and Plausible is not either.",
+            "It is never joined to your account. We cannot look up what a named writer read, because nothing in it points at a person.",
+          ],
+        },
+        "What it records is the page address, the site that linked you here if one did, the country your request appears to come from, and the broad kind of browser, operating system and screen you used. Your IP address is used to work out the country and is then discarded — it is never written down.",
+        "Two things worth saying plainly because they are unusual. Plausible's servers are in the European Union, which makes it the one company in our list that does not move your information to the United States. And the lawful basis is our legitimate interest in knowing whether the thing we built is being used — a basis you can object to, at the address in *Your rights* below, and we will honour it.",
+        "If your browser sends a Do Not Track signal, or you run an ad blocker or content blocker, this script does not load and you are not counted. We have not tried to work around that and will not.",
+      ],
+    },
+
+    {
       id: "cookies",
       heading: "Cookies, and what your browser stores",
       blocks: [
         `One cookie. It is called *${sessionCookie}*, it holds a random token meaning “this browser is signed in”, and it is set only when you sign in. It is marked HttpOnly — so no script can read it — along with SameSite=Lax and Secure, and it expires after ${sessionDays} days.`,
-        "That cookie is strictly necessary to provide a service you asked for, which is the category that does not require consent under the UK and EU e-privacy rules. That is the whole reason this site has never shown you a cookie banner: there is nothing here to consent to. No analytics cookie, no advertising cookie, no third-party tracker of any kind.",
+        "That cookie is strictly necessary to provide a service you asked for, which is the category that does not require consent under the UK and EU e-privacy rules. That is the whole reason this site has never shown you a cookie banner: there is nothing here to consent to. No advertising cookie, no cross-site tracker, and — because the analytics we do use stores nothing on your device at all — no analytics cookie either. See [how we count visits](/legal/privacy#analytics).",
         "The app also keeps a few preferences in your browser's own storage, which never leave your device and are never sent to us:",
         { list: deviceStorageKeys.map((key) => key) },
         "Those hold your theme, type size, page brightness and panel widths — facts about a screen rather than about you. Clearing your browser data resets them and loses nothing else.",
-        "Two notes about fonts and scripts, because both are places where other sites leak data and this one does not. The typefaces are downloaded when the app is built and served from our own domain, so loading a page makes no request to Google Fonts and no IP address of yours reaches them. The only third-party script anywhere in the app is Stripe's, and it loads *on the checkout page alone* — see below.",
+        "Two notes about fonts and scripts, because both are places where other sites leak data and this one does not. The typefaces are downloaded when the app is built and served from our own domain, so loading a page makes no request to Google Fonts and no IP address of yours reaches them. There are exactly two third-party scripts in the whole app: Plausible, described just above, and Stripe's, which loads *on the checkout page alone* — see below.",
       ],
     },
 
@@ -181,6 +206,7 @@ export const privacy: LegalDocument = {
         `We are in ${legalDetails.province}, and our providers are not. *Your information is stored and processed outside Quebec, and outside Canada — principally in the United States.* Saying so plainly is a requirement rather than a courtesy: Law 25 obliges us to inform you of it, and to have assessed before we do it that the information will receive adequate protection where it lands.`,
         "What that assessment turns on is the same short list for each provider — how sensitive the information is, what it will be used for, what the provider is contractually bound to do with it, and the legal regime it sits under. Every provider in the list above is bound by a contract permitting them to process this data only to provide their service to us.",
         "For writers in the UK and the EEA the same movement is covered by the safeguards that law provides: the UK and EU Standard Contractual Clauses and the UK Addendum, or the provider's certification under the EU–US and UK–US Data Privacy Framework, as applicable to each. Canada also holds an EU adequacy decision for commercial organisations, which is what lets your information reach us here in the first place.",
+        "One provider is the exception, and it is worth naming as such: Plausible, which counts page views, runs on servers inside the European Union. Nothing it holds crosses to the United States — and nothing it holds identifies you in the first place.",
         "Ask us which safeguard applies to a particular provider and we will tell you.",
       ],
     },

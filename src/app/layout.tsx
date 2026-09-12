@@ -93,6 +93,39 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           for carries no content attribute and Next drops an `other` entry whose value is empty.
         */}
         <meta name="darkreader-lock" />
+
+        {/*
+          Plausible: the only thing in this app that measures anything about a visitor.
+
+          Chosen because of what it does *not* do. It sets no cookie, so the strictly-necessary
+          session cookie stays the only one here and this app still owes no consent banner under
+          the UK/EU e-privacy rules or Law 25 — a cookie-based analytics tool would have required
+          one on every page, plus the consent state to go with it. It stores no cross-site
+          identifier and builds no profile, and its servers are in the EU, which makes it the one
+          processor in the stack that is not a transfer to the United States.
+
+          It is production-only, deliberately. Left on in development it would file the writer's
+          own localhost clicking about as real traffic, which is both useless and the sort of
+          thing you discover a month later in a number you then cannot trust. The UI inspector
+          is gated the same way, in the opposite direction.
+
+          The privacy policy names it, says what it collects, and explains the no-banner
+          position; see `content/legal/privacy.ts` and the sub-processor table in
+          `content/legal/details.ts`. Those are not optional companions to this tag — before it,
+          the policy said in as many words that there was no analytics of any kind.
+        */}
+        {process.env.NODE_ENV === "production" ? (
+          <>
+            <script defer src="https://plausible.io/js/pa-lJLhd564jFHAwB0VWC4L8.js" />
+            <script
+              dangerouslySetInnerHTML={{
+                __html:
+                  "window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)}," +
+                  "plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init()",
+              }}
+            />
+          </>
+        ) : null}
       </head>
       <body suppressHydrationWarning className="min-h-full bg-background text-foreground">
         {/* First thing in the body, and before the provider: it must set data-palette on

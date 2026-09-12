@@ -136,6 +136,11 @@ export const subprocessors = [
     data: "Your email address and the text of that message.",
   },
   {
+    name: "Plausible Analytics",
+    role: "Counts page views so we know which parts of the site are used. No cookies, no profile, no cross-site identifier.",
+    data: "The page you viewed, roughly where in the world you are, and what kind of browser and device you used. Nothing that identifies you, and nothing tied to your account.",
+  },
+  {
     name: "Google / GitHub",
     role: "Only if you choose “continue with” one of them instead of a password.",
     data: "They tell us your account id, your email address and whether it is verified. We tell them nothing.",
