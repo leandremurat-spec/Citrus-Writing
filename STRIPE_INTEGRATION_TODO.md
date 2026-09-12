@@ -290,6 +290,27 @@ So with a code applied the block now reads "**$42.00 for your first year**, then
 year", and the renewal row adds that the discount covers the first year only. This is why the
 promotion field and the disclosure had to ship together rather than one then the other.
 
+### The window: 1 October – 31 December 2026
+
+Three months, Montreal time. `expires_at` is set to **2027-01-01T04:59:59Z**, which is
+31 December 23:59:59 EST. The offset is not a typo — the window opens in EDT (UTC−4) and closes
+in EST (UTC−5), because North American DST ends on 1 November.
+
+**Stripe promotion codes have no start date.** There is an `expires_at` and nothing that says
+"activates on". So the code is created with `active: false` and has to be switched on when the
+promotion opens. Verified rather than assumed — applying it in its current state returns
+`type: "error"`, "This promotion code is invalid.", and the discount stays at $0.00. Nobody can
+redeem it early.
+
+That leaves two ways to run it, and the second is less to remember:
+
+1. **Pre-stage it** (what test mode is doing now): create it inactive, then flip `active=true` on
+   1 October. One switch to forget.
+2. **Create it on the day**, already active with the same `expires_at`. Nothing to flip, nothing
+   to remember, and the expiry still closes it on its own.
+
+Either way the *closing* is automatic. Only the opening needs a person.
+
 ### The Stripe objects
 
 **Test mode only** — live mode is a separate ledger and needs its own copies.
@@ -297,7 +318,7 @@ promotion field and the disclosure had to ship together rather than one then the
 | | |
 |---|---|
 | Coupon | `fDk6D8Ol` — 50% off, `duration: once`, restricted to the Serial product |
-| Promotion code | `WELCOME50` — `first_time_transaction: true`, expires in ~6 months |
+| Promotion code | `WELCOME50` — `first_time_transaction: true`, inactive, expires 31 Dec 2026 |
 
 `duration: "once"` means the first *invoice*, which on an annual plan is the first year. On the
 monthly plan the same coupon would discount one month, which is why it is restricted to the
@@ -305,24 +326,44 @@ product rather than left open.
 
 **The API shape has changed and the docs you find first will be wrong.** On this account's
 version (`2026-08-26.dahlia`) `POST /v1/promotion_codes` rejects the long-standing `coupon`
-parameter outright. It now takes:
+parameter outright. It now takes `promotion[type]=coupon` plus `promotion[coupon]`.
 
-```
-promotion[type]=coupon
-promotion[coupon]=<coupon id>
+Three more things learned the hard way, all of which will cost an hour if rediscovered:
+
+- **`expires_at` is create-only** on a promotion code. To change a window you deactivate and
+  recreate.
+- **A code string can be reused** once the old holder is deactivated, so `WELCOME50` survives a
+  recreate.
+- **A promotion code's `expires_at` may not be later than its coupon's `redeem_by`.** The coupon
+  above runs to March 2027, comfortably past the window, so it is a harmless backstop.
+
+### Creating it in live mode
+
+With a live `sk_live_` key. The coupon first:
+
+```bash
+curl https://api.stripe.com/v1/coupons -u "$STRIPE_SECRET_KEY:"   -d name="Welcome 50% (launch)"   -d percent_off=50   -d duration=once   -d "applies_to[products][0]=<live Serial product id>"   -d redeem_by=1798779599
 ```
 
-Also worth knowing: a promotion code's `expires_at` may not be later than its coupon's
-`redeem_by`, and promotion codes cannot be deleted — only deactivated with `active=false`.
+Then the code, with `active` set to whichever approach you picked above:
+
+```bash
+curl https://api.stripe.com/v1/promotion_codes -u "$STRIPE_SECRET_KEY:"   -d "promotion[type]=coupon"   -d "promotion[coupon]=<coupon id from above>"   -d code=WELCOME50   -d "restrictions[first_time_transaction]=true"   -d expires_at=1798779599   -d active=false
+```
+
+`1798779599` is 31 December 2026, 23:59:59 Montreal. Note the coupon's `redeem_by` is set to the
+same instant here rather than March — in live mode there is no reason for the backstop to outlast
+the promotion.
 
 ### Before the code goes out
 
-- [ ] Recreate the coupon and `WELCOME50` in **live** mode.
-- [ ] Decide the real redemption window. Six months is what the test objects carry; the coupon's
-      `redeem_by` and the code's `expires_at` must both be set, and the coupon's must not be
-      earlier.
-- [ ] If the code is advertised with an end date, honour that date — a stated expiry on a
-      promotion is a representation to the consumer, and Quebec's CPA is strict about it.
+- [ ] Create both objects in **live** mode.
+- [ ] Put 1 October in a calendar if you pre-stage it. An inactive code fails silently from the
+      customer's side — they see "invalid", not "not yet".
+- [ ] Decide whether the pricing page mentions the code during the window. Nothing surfaces it
+      today; a writer has to be told it exists.
+- [ ] If the code is advertised with an end date, honour that date. A stated expiry is a
+      representation to the consumer, and Quebec's CPA is strict about it.
 
 ## Going live
 
