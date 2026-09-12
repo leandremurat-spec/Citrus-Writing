@@ -393,6 +393,42 @@ final second, inactive one second later.
 - [ ] If the code is advertised with an end date, honour that date. A stated expiry is a
       representation to the consumer, and Quebec's CPA is strict about it.
 
+## `npm run stripe:check`
+
+Run it before a deploy, and after changing any Stripe variable.
+
+```bash
+npm run stripe:check
+```
+
+It exists because live checkout broke once with `No such price`, and nothing caught it until
+someone tried to pay and a server log was read by hand. **Stripe's test and live modes are
+separate ledgers**, so a price id created in one is simply absent in the other — and every
+symptom before the moment of payment looked healthy: the build passed, the page rendered, the
+route guarded correctly, the form mounted.
+
+What it asserts:
+
+| | |
+|---|---|
+| Key modes agree | A `sk_live_` secret with a `pk_test_` publishable fails later and far more confusingly than a missing key. |
+| Every price resolves | Against the configured key, naming the mode — because "No such price" alone sends people hunting for a typo rather than for the other ledger. |
+| Prices match `plans.ts` | The pricing page *and* the refund policy quote that file, so a mismatch is a price we state and do not charge. |
+| Intervals are right | The monthly slot recurs monthly; the yearly slot yearly. |
+| One currency | Two prices in different currencies is a pricing page that cannot add up. |
+| The webhook secret exists | Without it every webhook is rejected and no plan is ever granted. |
+| `promo.ts` matches Stripe | The code exists, its expiry matches the declared window, and the percentage matches. Fatal while the offer is open, a warning before it — the objects may legitimately not exist yet. |
+
+Three deliberate limits:
+
+- **It never prints a secret.** Keys are reported by mode only. A check you cannot paste into a
+  CI log is a check nobody runs.
+- **It is not in `npm run build`.** It needs the network and a real key; a build failing because
+  Stripe is unreachable would be a worse problem than the one it prevents. `legal:check` is in
+  the build because it is offline and deterministic.
+- **No key exits clean.** Running without `STRIPE_SECRET_KEY` is supported — the upgrade path
+  switches the plan directly, and is refused in production.
+
 ## Going live
 
 Everything below is configuration and account setup — **no further code changes are required**

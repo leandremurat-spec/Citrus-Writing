@@ -21,6 +21,7 @@
     "db:timing": "node node_modules/tsx/dist/cli.mjs scripts/db-write-timing.ts",
     "db:delete-novel": "node node_modules/tsx/dist/cli.mjs scripts/db-delete-novel.ts",
     "config:check": "node node_modules/tsx/dist/cli.mjs scripts/config-check.ts",
+    "stripe:check": "node node_modules/tsx/dist/cli.mjs scripts/stripe-check.ts",
     "theme:build": "node node_modules/tsx/dist/cli.mjs scripts/build-theme-css.ts",
     "theme:check": "node node_modules/tsx/dist/cli.mjs scripts/theme-check.ts",
     "legal:check": "node node_modules/tsx/dist/cli.mjs scripts/legal-check.ts"
