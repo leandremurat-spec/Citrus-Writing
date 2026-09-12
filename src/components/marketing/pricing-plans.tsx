@@ -15,6 +15,7 @@ import {
   type BillingInterval,
   type PlanId,
 } from "@/lib/billing/plans";
+import { firstChargeCents, type LaunchPromo } from "@/lib/billing/promo";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Emphasis } from "@/components/marketing/emphasis";
@@ -49,13 +50,32 @@ function Tick({ included, tone }: { included: boolean; tone: string }) {
   );
 }
 
-export function PricingPlans({ currentPlan }: { currentPlan: PlanId | null }) {
+export function PricingPlans({
+  currentPlan,
+  promo = null,
+}: {
+  currentPlan: PlanId | null;
+  /** Resolved on the server — see the pricing page. Null when no offer is running. */
+  promo?: LaunchPromo | null;
+}) {
   const router = useRouter();
   const [interval, setInterval] = React.useState<BillingInterval>("yearly");
   const [pending, setPending] = React.useState(false);
 
   const serialPerMonth = formatPrice(perMonthCents("SERIAL", interval));
   const saving = formatPrice(yearlySavingCents("SERIAL"));
+
+  // Only worth showing to someone who could actually redeem it: the Stripe code is restricted
+  // to first-time customers, so advertising it to an existing subscriber is an offer they
+  // would be refused at the till.
+  const offer =
+    promo && !currentPlan
+      ? {
+          code: promo.code,
+          first: formatPrice(firstChargeCents(promo, interval)),
+          period: interval === "yearly" ? "year" : "month",
+        }
+      : null;
 
   const upgrade = async () => {
     if (pending) return;
@@ -156,6 +176,16 @@ export function PricingPlans({ currentPlan }: { currentPlan: PlanId | null }) {
               a month{interval === "yearly" ? ", billed yearly" : ""}
             </span>
           </p>
+
+          {offer ? (
+            <p className="rounded-2xl bg-ochre-100 px-3.5 py-2.5 text-2xs leading-relaxed text-ochre-900">
+              <strong className="font-semibold">
+                {offer.first} for your first {offer.period}
+              </strong>{" "}
+              with the code <strong className="font-semibold">{offer.code}</strong> at checkout. New writers, while
+              the launch lasts.
+            </p>
+          ) : null}
 
           {currentPlan === "SERIAL" ? (
             <Button disabled className="h-11 bg-press text-[0.9375rem] text-press-foreground">

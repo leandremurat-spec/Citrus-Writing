@@ -117,7 +117,19 @@ function appearanceForCurrentTheme() {
   return { ...APPEARANCE, theme: dark ? "night" : "flat" };
 }
 
-export function CheckoutForm({ interval }: { interval: BillingInterval }) {
+export function CheckoutForm({
+  interval,
+  suggestedCode = null,
+}: {
+  interval: BillingInterval;
+  /**
+   * The launch code, when one is running. The field starts filled in with it rather than the
+   * writer being told a code and asked to retype it — the offer is ours, so making them
+   * transcribe it is friction we invented. It stays editable, and clearing it is how you
+   * decline.
+   */
+  suggestedCode?: string | null;
+}) {
   const [error, setError] = React.useState<string | null>(null);
   const started = React.useRef(false);
   const formRef = React.useRef<CheckoutFormHandle | null>(null);
@@ -152,7 +164,7 @@ export function CheckoutForm({ interval }: { interval: BillingInterval }) {
    */
   const actionsRef = React.useRef<CheckoutActions | null>(null);
   const [canRedeem, setCanRedeem] = React.useState(false);
-  const [codeInput, setCodeInput] = React.useState("");
+  const [codeInput, setCodeInput] = React.useState(suggestedCode ?? "");
   const [redeeming, setRedeeming] = React.useState(false);
   const [promoError, setPromoError] = React.useState<string | null>(null);
   const [discount, setDiscount] = React.useState<{ code: string; offCents: number } | null>(null);

@@ -355,6 +355,34 @@ curl https://api.stripe.com/v1/promotion_codes -u "$STRIPE_SECRET_KEY:"   -d "pr
 same instant here rather than March — in live mode there is no reason for the backstop to outlast
 the promotion.
 
+### How a writer finds out about it
+
+[`lib/billing/promo.ts`](src/lib/billing/promo.ts) is the app's one declaration of the offer —
+the code, the percentage and the window. It is a *description* of the Stripe objects, not a
+source of truth: Stripe decides what applies. So the same rule `plans.ts` follows holds here,
+**every money figure is derived, never restated**. The page computes $42 from `priceCents` and
+the percentage rather than carrying a hard-coded number that could drift from the coupon.
+
+Two surfaces, both gated on the window:
+
+| Where | What it does |
+|---|---|
+| [Pricing](src/components/marketing/pricing-plans.tsx) | A line on the Serial card: "**$42 for your first year** with the code WELCOME50 at checkout." It follows the monthly/yearly switch, so picking Monthly reads $4.50 for your first month. |
+| [Checkout](src/components/billing/checkout-form.tsx) | The discount field **starts filled in** with the code. The offer is ours, so making a writer transcribe it is friction we invented. It stays editable; clearing it is how you decline. |
+
+Two decisions inside that:
+
+- **It is only shown to someone who could redeem it.** The Stripe code is
+  `first_time_transaction`, so an existing subscriber seeing it would be an offer refused at the
+  till. The pricing line is hidden when the visitor already has a plan.
+- **The window is resolved on the server**, in the two `force-dynamic` pages, and passed down as
+  a prop. Reading the clock inside the client components would disagree with what the server
+  rendered and break hydration for the whole page — the same failure the Library's own
+  "Wednesday evening" kicker hit once already, and the reason that lesson is in CLAUDE.md.
+
+Boundaries are tested: inactive one second before it opens, active on the instant, active on the
+final second, inactive one second later.
+
 ### Before the code goes out
 
 - [ ] Create both objects in **live** mode.
@@ -453,12 +481,11 @@ upgrade loudly instead of quietly handing out the paid plan.
 - [x] ~~Contrast on the payment form~~ — resolved by making the appearance per mode.
 - [x] ~~The app's typeface in the form~~ — `"Segoe UI"` is a system font, so it needs no `fonts`
       option and makes no external request.
-- [ ] **A one-time price would be taken and not granted.** The webhook's
-      `checkout.session.completed` handler opens with `if (!session.subscription) break;`, so a
-      `mode: "payment"` session is acknowledged and ignored. Whoever adds the $39 launch offer
-      must handle that branch, or the money arrives with no plan attached. Also needs
-      `mode: "payment"` and `payment_method_collection` dropped, which Stripe applies only to
-      subscriptions.
+- [ ] *Latent, not scheduled.* The webhook's `checkout.session.completed` handler opens with
+      `if (!session.subscription) break;`, so a `mode: "payment"` session would be acknowledged
+      and granted nothing. No such product exists — the $39 one-time was dropped in favour of the
+      launch discount — but anyone adding one must handle that branch or the money arrives with
+      no plan attached.
 - [ ] Decide whether `allow_promotion_codes` should come back (see "Removed" above). If yes, set
       it in Checkout Studio rather than by hand, so the next sync does not strip it again.
       Relevant to any launch discount.

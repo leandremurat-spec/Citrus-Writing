@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/lib/auth/session";
 import { formatPrice, perMonthCents, PLANS, type BillingInterval } from "@/lib/billing/plans";
+import { activePromo } from "@/lib/billing/promo";
 import { AuthWordmark } from "@/components/auth/auth-parts";
 import { CheckoutForm } from "@/components/billing/checkout-form";
 import { LegalConsent } from "@/components/legal/legal-consent";
@@ -55,7 +56,9 @@ export default async function CheckoutPage({
         </p>
 
         <div className="mt-7 flex flex-col gap-4 rounded-[2rem] bg-neutral-100 p-5 ring-1 ring-edge sm:p-7">
-          <CheckoutForm interval={interval} />
+          {/* Resolved here, not in the form: the form is a client component, and reading the
+              clock during its render would break hydration for the page. */}
+          <CheckoutForm interval={interval} suggestedCode={activePromo()?.code ?? null} />
         </div>
 
         <LegalConsent action="Subscribing" className="mt-5 text-2xs leading-relaxed text-subtle" />

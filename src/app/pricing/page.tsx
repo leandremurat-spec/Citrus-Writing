@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { getCurrentUser } from "@/lib/auth/session";
 import type { PlanId } from "@/lib/billing/plans";
+import { activePromo } from "@/lib/billing/promo";
 import { Button } from "@/components/ui/button";
 import { MarketingFooter, MarketingNav, MarketingWidth } from "@/components/marketing/marketing-chrome";
 import { PricingPlans } from "@/components/marketing/pricing-plans";
@@ -50,7 +51,9 @@ export default async function PricingPage() {
             {pricing.hero.intro}
           </p>
 
-          <PricingPlans currentPlan={user ? (user.plan as PlanId) : null} />
+          {/* Resolved on the server: reading the clock in the client component would disagree
+              with the server render and break hydration for the page. */}
+          <PricingPlans currentPlan={user ? (user.plan as PlanId) : null} promo={activePromo()} />
         </section>
 
         {/* ------------------------------------------------------ comparison */}
