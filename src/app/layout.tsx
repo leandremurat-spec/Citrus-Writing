@@ -62,7 +62,8 @@ export const metadata: Metadata = {
     default: "Citrus Writing",
     template: "%s · Citrus Writing",
   },
-  description: "A writing and publishing workspace built for webnovel and serial fiction authors.",
+  description:
+    "Writing software for webnovel and serial fiction authors — chapters, arcs, a release buffer and clean export.",
   applicationName: "Citrus Writing",
   /*
    * The share card. Every per-page `metadata` export inherits these and overrides only what it
@@ -76,15 +77,20 @@ export const metadata: Metadata = {
     siteName: "Citrus Writing",
     locale: "en_CA",
     url: SITE,
-    title: "Citrus Writing — a workspace for webauthors",
+    /*
+     * Brand-first here, unlike the <title>. A share card is seen by someone a person has
+     * recommended this to, so the name is the useful half; a search result is seen by a stranger
+     * describing a problem, so the description is. Different readers, different order.
+     */
+    title: "Citrus Writing — writing software for webnovels and serials",
     description:
-      "Write the next one, stay ahead of the last. A workspace built for webnovels and serials: chapters, arcs, a release buffer and a codex that keeps your cast straight.",
+      "Write the next one, stay ahead of the last. Chapters and arcs, a release buffer that keeps you ahead of your readers, a codex that keeps your cast straight, and clean export.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Citrus Writing — a workspace for webauthors",
+    title: "Citrus Writing — writing software for webnovels and serials",
     description:
-      "Write the next one, stay ahead of the last. A workspace built for webnovels and serials.",
+      "Write the next one, stay ahead of the last. Chapters, arcs, a release buffer and clean export.",
   },
   // The writing surfaces are all behind sign-in and already unreachable to a crawler; this says
   // so explicitly for the marketing pages' sake, which are the ones meant to be indexed.

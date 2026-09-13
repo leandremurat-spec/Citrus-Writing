@@ -47,11 +47,26 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 export const landing = {
-  /** The browser tab, and what search engines and link previews show. */
+  /**
+   * The browser tab, and what a search result shows.
+   *
+   * Written for the search result rather than for the page, which is why it leads with what the
+   * thing *is* instead of what it is called. Nobody searches "Citrus Writing" yet, and nobody
+   * searches "webauthors" at all — the previous title contained neither a term anyone types nor
+   * a brand anyone knows, so a search engine had nothing to match it against.
+   *
+   * The words here are the ones this audience actually uses: webnovel, web serial, Royal Road.
+   * Naming Royal Road is a statement of fact — the export exists to paste cleanly into it — and
+   * "royal road writing tool" is a real query in a way that "workspace for webauthors" is not.
+   *
+   * **No price belongs in this file.** Numbers come from `lib/billing/plans.ts`, which the
+   * checkout enforces against; a price typed into copy is one that can go stale into a search
+   * result Google then caches for months.
+   */
   meta: {
-    title: "Citrus Writing — a workspace for webauthors",
+    title: "Webnovel and web serial writing software — Citrus Writing",
     description:
-      "Write the next chapter, stay ahead of the last. A writing workspace built for webnovel and serial fiction authors.",
+      "Writing software for webnovels and web serials: chapters and arcs, a release buffer that keeps you ahead of readers, and clean export for Royal Road.",
   },
 
   /** The huge headline. Two lines, each on its own row — keep both short. */
@@ -159,8 +174,10 @@ export const landing = {
 
 export const pricing = {
   meta: {
-    title: "Pricing",
-    description: "Free for one serial. Cheap for the rest. Every plan carries the whole writing surface.",
+    // "Pricing" alone matches nothing; the template appends the brand, so this carries the term.
+    title: "Pricing for webnovel writing software",
+    description:
+      "Free for one serial. Every plan carries the whole writing surface — manuscript, binder, version history, clean export. You pay for scale, not to write.",
   },
 
   hero: {
