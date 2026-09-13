@@ -253,8 +253,8 @@ export function InsightsPage({
             </div>
           ) : insights.serials === null ? (
             <p className="max-w-[54ch] text-sm leading-relaxed text-subtle">
-              Not enough history yet to project a pace honestly. A fortnight of writing is about
-              the point where the average stops being a guess — check back then.
+              We don’t have quite enough data to predict your pace just yet. It takes about two
+              weeks of writing for the average to become more than just a guess—check back then!
             </p>
           ) : insights.serials.length === 0 ? (
             <p className="text-sm text-subtle">No serials yet.</p>
