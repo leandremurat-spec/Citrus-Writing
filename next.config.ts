@@ -97,63 +97,9 @@ const securityHeaders = [
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
 ];
 
-/**
- * www to the apex, in the app rather than at the CDN.
- *
- * One canonical hostname, because two serving identical content splits whatever authority the
- * domain earns and makes the canonical tags argue with the server. The apex is the one every
- * canonical already points at, so www is the one that moves.
- *
- * ── Why two rules for one redirect ────────────────────────────────────────────
- *
- * Which header carries the real hostname depends on what is in front of the app, and there are
- * two proxies here. `type: "host"` matches the `Host` header; behind Railway's router that may
- * be the internal address rather than the one the browser typed — the same confusion that sent
- * Google sign-in to `localhost:8080`. `x-forwarded-host` is the one the OAuth fix proved
- * reliable in production.
- *
- * Matching both is not belt-and-braces for its own sake: either alone is a guess about
- * infrastructure, and a redirect that silently fails to fire looks exactly like one that was
- * never added. Two rules cost nothing and one of them is right.
- *
- * `:path*` carries the path across, and Next appends the query string on a redirect by itself —
- * the two things a hand-written CDN rule most often drops.
- */
-const WWW_HOST = "www.citruswritinglab.com";
-const APEX = "https://citruswritinglab.com";
-
 const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
-  },
-
-  async redirects() {
-    return [
-      {
-        source: "/:path*",
-        has: [{ type: "host", value: WWW_HOST }],
-        destination: `${APEX}/:path*`,
-        // 301 rather than Next's `permanent: true`, which emits 308.
-        //
-        // Google treats them alike, but 308's distinguishing feature is preserving the HTTP
-        // method on a redirect, and nothing here is ever anything but a GET. What is left is
-        // that every tool, log parser and crawler ever written understands 301, and a smaller
-        // set understands 308 — so the older code is the one with no downside.
-        statusCode: 301,
-      },
-      {
-        source: "/:path*",
-        has: [{ type: "header", key: "x-forwarded-host", value: WWW_HOST }],
-        destination: `${APEX}/:path*`,
-        // 301 rather than Next's `permanent: true`, which emits 308.
-        //
-        // Google treats them alike, but 308's distinguishing feature is preserving the HTTP
-        // method on a redirect, and nothing here is ever anything but a GET. What is left is
-        // that every tool, log parser and crawler ever written understands 301, and a smaller
-        // set understands 308 — so the older code is the one with no downside.
-        statusCode: 301,
-      },
-    ];
   },
 };
 
