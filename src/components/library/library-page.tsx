@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { ArrowRight, Plus } from "lucide-react";
+import { ChartNoAxesColumn, ArrowRight, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { createNovel } from "@/lib/actions/novels";
@@ -107,6 +107,15 @@ export function LibraryPage({
       <nav className="flex items-center gap-3 px-8 py-5">
         <Link href="/" className="focus-ring rounded-md">
           <Wordmark />
+        </Link>
+        {/* Beside the wordmark rather than in the account menu: it is about the writing, not
+            about the account, and it is the thing a writer opens on purpose. */}
+        <Link
+          href="/library/insights"
+          className="focus-ring inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-2xs text-subtle transition-colors duration-tint ease-state hover:bg-muted hover:text-foreground"
+        >
+          <ChartNoAxesColumn className="size-3.5" aria-hidden="true" />
+          Insights
         </Link>
         <span className="flex-1" />
         {canAddSerial ? (

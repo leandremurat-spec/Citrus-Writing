@@ -26,6 +26,7 @@ import { landing } from "@/content/site-copy";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/" },
   title: landing.meta.title,
   description: landing.meta.description,
 };

@@ -18,6 +18,7 @@ import { MarketingFooter, MarketingNav, MarketingWidth } from "@/components/mark
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/legal" },
   title: "Legal",
   description: `The terms, the privacy policy and the refund policy for ${legalDetails.product}.`,
 };

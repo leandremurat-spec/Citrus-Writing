@@ -27,6 +27,7 @@ import { pricing } from "@/content/site-copy";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/pricing" },
   title: pricing.meta.title,
   description: pricing.meta.description,
 };

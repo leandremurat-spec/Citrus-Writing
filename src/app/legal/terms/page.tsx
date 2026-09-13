@@ -7,6 +7,7 @@ import { LegalPage } from "@/components/legal/legal-page";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/legal/terms" },
   title: terms.title,
   description: terms.summary,
 };
